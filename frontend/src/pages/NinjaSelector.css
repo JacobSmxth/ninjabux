@@ -1,0 +1,140 @@
+.selector-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #ff6eb4 0%, #b06be3 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.selector-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: url('/ninjajumping.webp') no-repeat center;
+  background-size: contain;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.selector-card {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  max-width: 1000px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.selector-title {
+  font-size: 3rem;
+  color: var(--ninja-black);
+  margin-bottom: 2rem;
+  text-align: center;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.ninja-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.ninja-card {
+  background: linear-gradient(135deg, var(--ninja-black) 0%, #333 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+  text-align: center;
+  border: 3px solid var(--ninja-red);
+}
+
+.ninja-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 40px rgba(227, 30, 36, 0.4);
+  border-color: var(--ninja-red);
+}
+
+.belt-badge {
+  display: inline-block;
+  padding: 0.5rem 1.2rem;
+  border-radius: 25px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  border: 3px solid white;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ninja-card h2 {
+  font-size: 1.6rem;
+  margin-bottom: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ninja-balance {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--ninja-red);
+  margin: 0.8rem 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.ninja-progress {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.no-ninjas {
+  text-align: center;
+  padding: 2rem;
+}
+
+.no-ninjas p {
+  margin-bottom: 1rem;
+  color: var(--dark-gray);
+}
+
+.help-text {
+  font-size: 0.9rem;
+  color: #666;
+  background: var(--light-gray);
+  padding: 1rem;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+}
+
+.retry-btn {
+  background: var(--ninja-red);
+  color: white;
+  border: none;
+  padding: 1rem 2.5rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.retry-btn:hover {
+  background: #c41a1f;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(227, 30, 36, 0.4);
+}

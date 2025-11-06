@@ -1,0 +1,2 @@
+-- Initial data script
+-- Admin accounts are now initialized via DataInitializer.java
