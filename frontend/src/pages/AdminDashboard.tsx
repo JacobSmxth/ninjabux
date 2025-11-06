@@ -286,7 +286,6 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [analytics, setAnalytics] = useState<any>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [rebuildingLeaderboard, setRebuildingLeaderboard] = useState(false);
-  const [showPriceOptimization, setShowPriceOptimization] = useState(false);
 
   const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementMessage, setAnnouncementMessage] = useState('');
@@ -2605,38 +2604,6 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
             <div className="loading-message">Loading analytics...</div>
           ) : analytics ? (
             <div className="analytics-dashboard">
-              {/* Progress Velocity */}
-              {analytics.progressVelocity && (
-                <div className="analytics-section">
-                  <h3><FiZap /> Progress Velocity</h3>
-                  <div className="analytics-grid">
-                    <div className="metric-card">
-                      <div className="metric-label">Total Sessions Tracked</div>
-                      <div className="metric-value">
-                        {Object.keys(analytics.progressVelocity.sessionCount || {}).length}
-                      </div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">Avg Lessons per Session</div>
-                      <div className="metric-value">
-                        {(() => {
-                          const values = Object.values(analytics.progressVelocity.lessonsPerSession || {}) as number[];
-                          return values.length > 0 
-                            ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)
-                            : '0.0';
-                        })()}
-                      </div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">Total Lessons This Week</div>
-                      <div className="metric-value">
-                        {Object.values(analytics.progressVelocity.lessonsThisWeek || {}).reduce((a: number, b: unknown) => a + (typeof b === 'number' ? b : 0), 0)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Stall Detection */}
               {analytics.stallDetection && (
                 <div className="analytics-section">
@@ -2841,38 +2808,6 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-                  {analytics.itemPopularity.priceOptimization && Object.keys(analytics.itemPopularity.priceOptimization).length > 0 && (
-                    <div className="popularity-section">
-                      <div className="section-header-expandable">
-                        <h4>Price Optimization Suggestions</h4>
-                        <button
-                          onClick={() => setShowPriceOptimization(!showPriceOptimization)}
-                          className="btn btn-sm btn-secondary"
-                        >
-                          {showPriceOptimization ? 'Hide' : 'Show'} ({Object.entries(analytics.itemPopularity.priceOptimization)
-                            .filter(([_, data]: [string, any]) => data.suggestedPrice !== data.currentPrice).length})
-                        </button>
-                      </div>
-                      {showPriceOptimization && (
-                        <div className="optimization-list">
-                          {Object.entries(analytics.itemPopularity.priceOptimization)
-                            .filter(([_, data]: [string, any]) => data.suggestedPrice !== data.currentPrice)
-                            .slice(0, 10)
-                            .map(([itemId, data]: [string, any]) => (
-                              <div key={itemId} className="optimization-card">
-                                <div className="opt-item-name">{data.itemName}</div>
-                                <div className="opt-prices">
-                                  <span>Current: {data.currentPrice} Bux</span>
-                                  <span>→</span>
-                                  <span>Suggested: {data.suggestedPrice} Bux</span>
-                                </div>
-                                <div className="opt-reason">{data.reason}</div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

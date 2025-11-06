@@ -5,18 +5,10 @@ import java.util.Map;
 
 
 public class AnalyticsResponse {
-    private ProgressVelocityMetrics progressVelocity;
     private StallDetectionMetrics stallDetection;
     private EconomyHealthMetrics economyHealth;
     private EngagementMetrics engagement;
     private ItemPopularityMetrics itemPopularity;
-
-    public ProgressVelocityMetrics getProgressVelocity() {
-        return progressVelocity;
-    }
-    public void setProgressVelocity(ProgressVelocityMetrics progressVelocity) {
-        this.progressVelocity = progressVelocity;
-    }
 
     public StallDetectionMetrics getStallDetection() {
         return stallDetection;
@@ -44,41 +36,6 @@ public class AnalyticsResponse {
     }
     public void setItemPopularity(ItemPopularityMetrics itemPopularity) {
         this.itemPopularity = itemPopularity;
-    }
-
-    public static class ProgressVelocityMetrics {
-        private Map<Long, Double> lessonsPerSession;
-        private Map<Long, Double> lessonsPerWeek;
-        private Map<Long, Integer> sessionCount;
-        private Map<Long, Integer> lessonsThisWeek;
-
-        public Map<Long, Double> getLessonsPerSession() {
-            return lessonsPerSession;
-        }
-        public void setLessonsPerSession(Map<Long, Double> lessonsPerSession) {
-            this.lessonsPerSession = lessonsPerSession;
-        }
-
-        public Map<Long, Double> getLessonsPerWeek() {
-            return lessonsPerWeek;
-        }
-        public void setLessonsPerWeek(Map<Long, Double> lessonsPerWeek) {
-            this.lessonsPerWeek = lessonsPerWeek;
-        }
-
-        public Map<Long, Integer> getSessionCount() {
-            return sessionCount;
-        }
-        public void setSessionCount(Map<Long, Integer> sessionCount) {
-            this.sessionCount = sessionCount;
-        }
-
-        public Map<Long, Integer> getLessonsThisWeek() {
-            return lessonsThisWeek;
-        }
-        public void setLessonsThisWeek(Map<Long, Integer> lessonsThisWeek) {
-            this.lessonsThisWeek = lessonsThisWeek;
-        }
     }
 
     public static class StallDetectionMetrics {
@@ -424,7 +381,6 @@ public class AnalyticsResponse {
     public static class ItemPopularityMetrics {
         private List<PopularItem> mostPopularItems;
         private List<PopularItem> leastPopularItems;
-        private Map<Long, PriceOptimizationData> priceOptimization; // itemId -> optimization data
 
         public List<PopularItem> getMostPopularItems() {
             return mostPopularItems;
@@ -438,13 +394,6 @@ public class AnalyticsResponse {
         }
         public void setLeastPopularItems(List<PopularItem> leastPopularItems) {
             this.leastPopularItems = leastPopularItems;
-        }
-
-        public Map<Long, PriceOptimizationData> getPriceOptimization() {
-            return priceOptimization;
-        }
-        public void setPriceOptimization(Map<Long, PriceOptimizationData> priceOptimization) {
-            this.priceOptimization = priceOptimization;
         }
     }
 
@@ -488,56 +437,6 @@ public class AnalyticsResponse {
         }
         public void setConversionRate(double conversionRate) {
             this.conversionRate = conversionRate;
-        }
-    }
-
-
-    // lowkey claudes idea
-    public static class PriceOptimizationData {
-        private Long itemId;
-        private String itemName;
-        private int currentPrice;
-        private int suggestedPrice;
-        private String reason;
-        private double priceElasticity;
-
-        public Long getItemId() {
-            return itemId;
-        }
-        public void setItemId(Long itemId) {
-            this.itemId = itemId;
-        }
-        public String getItemName() {
-            return itemName;
-        }
-        public void setItemName(String itemName) {
-            this.itemName = itemName;
-        }
-
-        public int getCurrentPrice() {
-            return currentPrice;
-        }
-        public void setCurrentPrice(int currentPrice) {
-            this.currentPrice = currentPrice;
-        }
-        public int getSuggestedPrice() {
-            return suggestedPrice;
-        }
-        public void setSuggestedPrice(int suggestedPrice) {
-            this.suggestedPrice = suggestedPrice;
-        }
-
-        public String getReason() {
-            return reason;
-        }
-        public void setReason(String reason) {
-            this.reason = reason;
-        }
-        public double getPriceElasticity() {
-            return priceElasticity;
-        }
-        public void setPriceElasticity(double priceElasticity) {
-            this.priceElasticity = priceElasticity;
         }
     }
 }

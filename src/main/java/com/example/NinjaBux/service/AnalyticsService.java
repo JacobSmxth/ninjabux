@@ -63,14 +63,6 @@ public class AnalyticsService {
         AnalyticsResponse response = new AnalyticsResponse();
         
         try {
-            response.setProgressVelocity(calculateProgressVelocity());
-        } catch (Exception e) {
-            System.err.println("Error calculating progress velocity: " + e.getMessage());
-            e.printStackTrace();
-            response.setProgressVelocity(new AnalyticsResponse.ProgressVelocityMetrics());
-        }
-        
-        try {
             response.setStallDetection(calculateStallDetection());
         } catch (Exception e) {
             System.err.println("Error calculating stall detection: " + e.getMessage());
@@ -103,162 +95,6 @@ public class AnalyticsService {
         }
         
         return response;
-    }
-
-    // this gets messy because we need to account for belt/level changes, which i said already, sucks.
-    private AnalyticsResponse.ProgressVelocityMetrics calculateProgressVelocity() {
-        AnalyticsResponse.ProgressVelocityMetrics metrics = new AnalyticsResponse.ProgressVelocityMetrics();
-        
-        LocalDateTime weekAgo = LocalDateTime.now().minusWeeks(1);
-        List<ProgressHistory> allHistory = progressHistoryRepository.findAll();
-        
-        Map<Long, Double> lessonsPerSession = new HashMap<>();
-        Map<Long, Double> lessonsPerWeek = new HashMap<>();
-        Map<Long, Integer> sessionCount = new HashMap<>();
-        Map<Long, Integer> lessonsThisWeek = new HashMap<>();
-        
-        Map<Long, Map<LocalDate, List<ProgressHistory>>> ninjaSessions = allHistory.stream()
-            .filter(h -> h.getEarningType() == ProgressHistory.EarningType.LEVEL_UP)
-            .collect(Collectors.groupingBy(
-                h -> h.getNinja().getId(),
-                Collectors.groupingBy(h -> h.getTimestamp().toLocalDate())
-            ));
-        
-        Map<Long, Ninja> ninjaMap = ninjaRepository.findAll().stream()
-            .collect(Collectors.toMap(Ninja::getId, n -> n));
-        
-        for (Map.Entry<Long, Map<LocalDate, List<ProgressHistory>>> ninjaEntry : ninjaSessions.entrySet()) {
-            Long ninjaId = ninjaEntry.getKey();
-            Map<LocalDate, List<ProgressHistory>> sessions = ninjaEntry.getValue();
-            
-            List<ProgressHistory> allNinjaHistory = allHistory.stream()
-                .filter(h -> h.getNinja().getId().equals(ninjaId))
-                .filter(h -> h.getEarningType() == ProgressHistory.EarningType.LEVEL_UP)
-                .sorted((a, b) -> a.getTimestamp().compareTo(b.getTimestamp()))
-                .collect(Collectors.toList());
-            
-            int totalSessions = sessions.size();
-            int totalLessons = 0;
-            
-            // work backwards from current state to figure out actual lessons advanced
-            if (!allNinjaHistory.isEmpty()) {
-                Ninja ninja = ninjaMap.get(ninjaId);
-                BeltType previousBelt = (ninja != null) ? ninja.getCurrentBeltType() : null;
-                int previousLevel = (ninja != null) ? ninja.getCurrentLevel() : 0;
-                int previousLesson = (ninja != null) ? ninja.getCurrentLesson() : 0;
-                
-                for (int i = allNinjaHistory.size() - 1; i >= 0; i--) {
-                    ProgressHistory record = allNinjaHistory.get(i);
-                    BeltType recordBelt = record.getBeltType();
-                    int recordLevel = record.getLevel();
-                    int recordLesson = record.getLesson();
-                    
-                    int lessonsDiff = 0;
-                    
-                    if (i == allNinjaHistory.size() - 1) {
-                        if (previousBelt != null && previousBelt.equals(recordBelt) && previousLevel == recordLevel) {
-                            lessonsDiff = previousLesson - recordLesson;
-                        } else {
-                            lessonsDiff = calculateLessonsBetween(recordBelt, recordLevel, recordLesson, previousBelt, previousLevel, previousLesson);
-                        }
-                        previousBelt = recordBelt;
-                        previousLevel = recordLevel;
-                        previousLesson = recordLesson;
-                    } else {
-                        ProgressHistory nextRecord = allNinjaHistory.get(i + 1);
-                        BeltType nextBelt = nextRecord.getBeltType();
-                        int nextLevel = nextRecord.getLevel();
-                        int nextLesson = nextRecord.getLesson();
-                        
-                        if (recordBelt.equals(nextBelt) && recordLevel == nextLevel) {
-                            lessonsDiff = nextLesson - recordLesson;
-                        } else {
-                            lessonsDiff = calculateLessonsBetween(recordBelt, recordLevel, recordLesson, nextBelt, nextLevel, nextLesson);
-                        }
-                    }
-                    
-                    totalLessons += Math.max(1, lessonsDiff);
-                }
-            }
-            
-            sessionCount.put(ninjaId, totalSessions);
-            lessonsPerSession.put(ninjaId, totalSessions > 0 ? (double) totalLessons / totalSessions : 0.0);
-            
-            int lessonsThisWeekCount = 0;
-            List<ProgressHistory> weekRecords = allHistory.stream()
-                .filter(h -> h.getNinja().getId().equals(ninjaId))
-                .filter(h -> h.getTimestamp().isAfter(weekAgo))
-                .filter(h -> h.getEarningType() == ProgressHistory.EarningType.LEVEL_UP)
-                .sorted((a, b) -> a.getTimestamp().compareTo(b.getTimestamp()))
-                .collect(Collectors.toList());
-            
-            if (!weekRecords.isEmpty()) {
-                List<ProgressHistory> beforeWeek = allHistory.stream()
-                    .filter(h -> h.getNinja().getId().equals(ninjaId))
-                    .filter(h -> h.getTimestamp().isBefore(weekAgo))
-                    .filter(h -> h.getEarningType() == ProgressHistory.EarningType.LEVEL_UP)
-                    .sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()))
-                    .collect(Collectors.toList());
-                
-                BeltType startBelt = null;
-                int startLevel = 0;
-                int startLesson = 0;
-                
-                if (!beforeWeek.isEmpty()) {
-                    ProgressHistory lastBeforeWeek = beforeWeek.get(0);
-                    startBelt = lastBeforeWeek.getBeltType();
-                    startLevel = lastBeforeWeek.getLevel();
-                    startLesson = lastBeforeWeek.getLesson();
-                } else {
-                    Ninja ninja = ninjaMap.get(ninjaId);
-                    if (ninja != null) {
-                        startBelt = ninja.getCurrentBeltType();
-                        startLevel = ninja.getCurrentLevel();
-                        startLesson = ninja.getCurrentLesson();
-                        for (int i = weekRecords.size() - 1; i >= 0; i--) {
-                            ProgressHistory record = weekRecords.get(i);
-                            if (record.getBeltType().equals(startBelt) && record.getLevel() == startLevel) {
-                                startLesson = Math.min(startLesson, record.getLesson());
-                            }
-                        }
-                        startLesson = Math.max(1, startLesson - 1);
-                    }
-                }
-                
-                BeltType previousBelt = startBelt;
-                int previousLevel = startLevel;
-                int previousLesson = startLesson;
-                
-                for (ProgressHistory record : weekRecords) {
-                    BeltType recordBelt = record.getBeltType();
-                    int recordLevel = record.getLevel();
-                    int recordLesson = record.getLesson();
-                    
-                    int lessonDiff;
-                    if (previousBelt != null && previousBelt.equals(recordBelt) && previousLevel == recordLevel) {
-                        lessonDiff = recordLesson - previousLesson;
-                    } else {
-                        lessonDiff = calculateLessonsBetween(previousBelt, previousLevel, previousLesson, 
-                                                           recordBelt, recordLevel, recordLesson);
-                    }
-                    
-                    lessonsThisWeekCount += Math.max(1, lessonDiff);
-                    previousBelt = recordBelt;
-                    previousLevel = recordLevel;
-                    previousLesson = recordLesson;
-                }
-            }
-            
-            lessonsThisWeek.put(ninjaId, lessonsThisWeekCount);
-            lessonsPerWeek.put(ninjaId, (double) lessonsThisWeekCount);
-        }
-        
-        metrics.setLessonsPerSession(lessonsPerSession);
-        metrics.setLessonsPerWeek(lessonsPerWeek);
-        metrics.setSessionCount(sessionCount);
-        metrics.setLessonsThisWeek(lessonsThisWeek);
-        
-        return metrics;
     }
 
     // find ninjas who havent made progress recently
@@ -599,41 +435,8 @@ public class AnalyticsService {
             .skip(Math.max(0, popularItems.size() - 10))
             .collect(Collectors.toList());
         
-        Map<Long, AnalyticsResponse.PriceOptimizationData> priceOptimization = new HashMap<>();
-        for (ShopItem item : allItems) {
-            List<Purchase> itemPurchases = allPurchases.stream()
-                .filter(p -> p.getShopItem().getId().equals(item.getId()))
-                .collect(Collectors.toList());
-            
-            AnalyticsResponse.PriceOptimizationData optData = new AnalyticsResponse.PriceOptimizationData();
-            optData.setItemId(item.getId());
-            optData.setItemName(item.getName());
-            optData.setCurrentPrice(item.getPrice());
-            
-            LocalDateTime monthAgo = LocalDateTime.now().minusMonths(1);
-            long recentPurchases = itemPurchases.stream()
-                .filter(p -> p.getPurchaseDate().isAfter(monthAgo))
-                .count();
-            
-            if (recentPurchases == 0 && itemPurchases.size() == 0) {
-                optData.setSuggestedPrice(Math.max(1, item.getPrice() - 5));
-                optData.setReason("No purchases - consider lowering price to increase demand");
-            } else if (recentPurchases > 10) {
-                optData.setSuggestedPrice(item.getPrice() + 5);
-                optData.setReason("High demand - price could be increased");
-            } else {
-                optData.setSuggestedPrice(item.getPrice());
-                optData.setReason("Price seems optimal");
-            }
-            
-            optData.setPriceElasticity(0.0);
-            
-            priceOptimization.put(item.getId(), optData);
-        }
-        
         metrics.setMostPopularItems(mostPopular);
         metrics.setLeastPopularItems(leastPopular);
-        metrics.setPriceOptimization(priceOptimization);
         
         return metrics;
     }
