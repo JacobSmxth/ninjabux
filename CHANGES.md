@@ -1,7 +1,3 @@
-## Commit
-
-refactor(ninja): simplify domain model by removing deprecated fields
-
 ## Changes
 
 * Remove deprecated balance tracking fields (totalBuxEarned/totalBuxSpent) to eliminate dual source of truth
@@ -9,6 +5,8 @@ refactor(ninja): simplify domain model by removing deprecated fields
 * Remove lesson counter fields (lessonsAllTime/lessonsSinceConversion/postOnboardLessonCount/postLegacyAlternator) to simplify domain model
 * Remove lock metadata fields (lockReason/lockedAt) to reduce domain complexity
 * Remove adminNote field to simplify admin interface
+* Remove Progress Velocity analytics feature (calculateProgressVelocity method, ProgressVelocityMetrics DTO, UI section)
+* Remove Price Optimization analytics feature (price optimization calculation, PriceOptimizationData DTO, UI section)
 * Always recalculate balance from ledger instead of using cache in getBuxBalanceQuarters
 * Simplify createNinja by always calling onboardNinjaWithLegacy regardless of starting position
 * Simplify lock checks by removing lockReason dependency
