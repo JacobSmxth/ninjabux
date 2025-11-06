@@ -6,41 +6,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class BeltRewardCalculator {
 
-    // single class instead of a million classes because i learned my lesson
-    private static final int STARTING_BALANCE = 0;
-
-    private static final double BELT_UP_REWARD = 5.0;
-
-    private static final double WHITE_LESSON_REWARD = 1.0;
-    private static final double WHITE_LEVEL_REWARD = 2.0;
-
-    private static final double YELLOW_LESSON_REWARD = 1.5;
-    private static final double YELLOW_LEVEL_REWARD = 3.0;
-
-    private static final double ORANGE_LESSON_REWARD = 2.0;
-    private static final double ORANGE_LEVEL_REWARD = 4.0;
-
-    private static final double GREEN_LESSON_REWARD = 2.5;
-    private static final double GREEN_LEVEL_REWARD = 5.0;
-
-    private static final double BLUE_LESSON_REWARD = 3.0;
-    private static final double BLUE_LEVEL_REWARD = 6.0;
-
-    private static final int WHITE_BELT_LEVELS = 8;
-    private static final int[] WHITE_BELT_LESSONS_PER_LEVEL = {8, 8, 8, 8, 8, 8, 8, 8};
-
-    private static final int YELLOW_BELT_LEVELS = 10;
-    private static final int[] YELLOW_BELT_LESSONS_PER_LEVEL = {8, 8, 11, 8, 8, 11, 11, 8, 11, 7};
-
-    private static final int ORANGE_BELT_LEVELS = 12;
-    private static final int[] ORANGE_BELT_LESSONS_PER_LEVEL = {11, 11, 11, 11, 8, 8, 11, 11, 11, 11, 11, 10};
-
-    private static final int GREEN_BELT_LEVELS = 10;
-    private static final int[] GREEN_BELT_LESSONS_PER_LEVEL = {8, 8, 11, 11, 17, 11, 11, 8, 8, 10};
-
-    private static final int BLUE_BELT_LEVELS = 3;
-    private static final int[] BLUE_BELT_LESSONS_PER_LEVEL = {10, 13, 1};
-
 
     public int calculateBalance(BeltType beltType, int currentLevel, int currentLesson) {
         int totalBux = STARTING_BALANCE;
