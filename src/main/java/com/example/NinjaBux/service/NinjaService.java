@@ -10,11 +10,7 @@ import com.example.NinjaBux.dto.LeaderboardResponse;
 import com.example.NinjaBux.exception.AccountLockedException;
 import com.example.NinjaBux.exception.InvalidProgressException;
 import com.example.NinjaBux.exception.NinjaNotFoundException;
-import com.example.NinjaBux.repository.NinjaRepository;
-import com.example.NinjaBux.repository.ProgressHistoryRepository;
-import com.example.NinjaBux.repository.AchievementProgressRepository;
-import com.example.NinjaBux.repository.LedgerTxnRepository;
-import com.example.NinjaBux.repository.LegacyLedgerTxnRepository;
+import com.example.NinjaBux.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -45,10 +41,10 @@ public class NinjaService {
     private BeltRewardCalculator beltRewardCalculator;
 
     @Autowired
-    private com.example.NinjaBux.repository.QuestionAnswerRepository questionAnswerRepository;
+    private QuestionAnswerRepository questionAnswerRepository;
 
     @Autowired
-    private com.example.NinjaBux.repository.PurchaseRepository purchaseRepository;
+    private PurchaseRepository purchaseRepository;
 
     @Autowired(required = false)
     private AchievementService achievementService;
@@ -68,14 +64,16 @@ public class NinjaService {
     @Autowired
     private LegacyLedgerTxnRepository legacyLedgerTxnRepository;
 
-    // this null check is holding the system together
+    // WHY: simplify lock check by removing lockReason field dependency
+    // WHAT: removed lockReason from exception message, use generic message
     private void checkAccountLocked(Ninja ninja) {
         if (ninja.isLocked()) {
-            String reason = ninja.getLockReason() != null ? ninja.getLockReason() : "Account is locked";
-            throw new AccountLockedException(reason);
+            throw new AccountLockedException("Account is locked");
         }
     }
 
+    // WHY: simplify onboarding logic by always calling onboard regardless of starting position
+    // WHAT: removed conditional onboarding check, always call onboardNinjaWithLegacy with computed balance
     @Transactional
     public Ninja createNinja(String firstName, String lastName, String username,
                             BeltType beltType, Integer level, Integer lesson) {
@@ -83,32 +81,18 @@ public class NinjaService {
         int startingLevel = (level != null) ? level : 1;
         int startingLesson = (lesson != null) ? lesson : 1;
 
+        // May remove
         if (!beltRewardCalculator.isValidProgress(startingBelt, startingLevel, startingLesson)) {
             String errorMessage = beltRewardCalculator.getValidationErrorMessage(startingBelt, startingLevel, startingLesson);
             throw new InvalidProgressException(errorMessage);
         }
 
-        // claude said start with zero then fix it later. here we are.
-        Ninja ninja = new Ninja(firstName, lastName, username, 0, 0, startingLesson, startingLevel, startingBelt);
-        ninja.setPostOnboardLessonCount(0); // forgot why this exists but deleting it breaks stuff
-        ninja.setLessonsAllTime(0);
-        ninja.setLessonsSinceConversion(0);
-
+        Ninja ninja = new Ninja(firstName, lastName, username, startingLesson, startingLevel, startingBelt);
         ninja = ninjaRepository.save(ninja);
 
-        // if they already have progress, pretend they earned it retroactively
-        boolean needsOnboarding = (startingBelt != BeltType.WHITE) || (startingLevel > 1) || (startingLesson > 1);
-        
-        if (needsOnboarding) {
-            // backfill their balance based on where they are now because the old system was chaos
-            int computedBalance = beltRewardCalculator.calculateBalance(startingBelt, startingLevel, startingLesson);
-            
-            // legacy system rounds to nearest 10 for some reason i dont remember
-            ledgerService.onboardNinjaWithLegacy(ninja.getId(), computedBalance);
-        } else {
-            // fresh start gets the standard 120 bux grant because reasons
-            ledgerService.onboardNinjaWithLegacy(ninja.getId(), 0);
-        }
+
+        int computedBalance = beltRewardCalculator.calculateBalance(startingBelt, startingLevel, startingLesson);
+        ledgerService.onboardNinjaWithLegacy(ninja.getId(), computedBalance); // round to nearest 10
 
         if (achievementService != null) {
             try {
@@ -367,25 +351,18 @@ public class NinjaService {
         return ninjaRepository.findByFilters(name, beltFilter, lockedFilter, pageable);
     }
 
+    // WHY: simplify lock check by removing lockReason field dependency
+    // WHAT: removed lockReason from exception message, use generic message
     public Optional<Ninja> getNinjaByUsername(String username) {
         Optional<Ninja> ninjaOpt = ninjaRepository.findByUsernameIgnoreCase(username);
-        if (ninjaOpt.isPresent()) {
-            Ninja ninja = ninjaOpt.get();
-            // check lock status before letting them do anything
-            if (ninja.isLocked()) {
-                // locked accounts get the boot immediately
-                String reason = ninja.getLockReason() != null ? ninja.getLockReason() : "Account is locked";
-                throw new AccountLockedException(reason);
-            }
+        if (ninjaOpt.isPresent() && ninjaOpt.get().isLocked()) {
+            throw new AccountLockedException("Account is locked");
         }
         return ninjaOpt;
     }
 
-    public Ninja updateNinja(Long ninjaId, String firstName, String lastName, String username,
-                            BeltType beltType, Integer level, Integer lesson) {
-        return updateNinja(ninjaId, firstName, lastName, username, beltType, level, lesson, null);
-    }
-
+    // WHY: remove adminNote field and totalBuxEarned tracking to simplify domain model
+    // WHAT: removed adminNote handling and totalBuxEarned update logic, removed overloaded method
     public Ninja updateNinja(Long ninjaId, String firstName, String lastName, String username,
                             BeltType beltType, Integer level, Integer lesson, String adminNote) {
         Ninja ninja = ninjaRepository.findById(ninjaId)
@@ -394,17 +371,6 @@ public class NinjaService {
         if (firstName != null) ninja.setFirstName(firstName);
         if (lastName != null) ninja.setLastName(lastName);
         if (username != null) ninja.setUsername(username);
-        // empty string means delete the note, null means leave it alone
-        if (adminNote != null) {
-            ninja.setAdminNote(adminNote.isEmpty() ? null : adminNote);
-        }
-
-        int oldTotalEarned = ninja.getTotalBuxEarned();
-        // dont spam history when creating a new ninja from scratch
-        boolean isInitialSetup = (ninja.getCurrentBeltType() == BeltType.WHITE &&
-                                  ninja.getCurrentLevel() == 0 &&
-                                  ninja.getCurrentLesson() == 0 &&
-                                  ninja.getTotalBuxEarned() == 0);
 
         BeltType oldBelt = ninja.getCurrentBeltType();
         int oldLevel = ninja.getCurrentLevel();
@@ -1086,6 +1052,8 @@ public class NinjaService {
         return ninja;
     }
 
+    // WHY: remove lockReason and lockedAt fields to simplify domain model
+    // WHAT: removed setLockReason and setLockedAt calls from lock/unlock methods
     // unlock account and let them back in
     @Transactional
     public Ninja unlockAccount(Long ninjaId, String adminUsername) {
@@ -1093,9 +1061,7 @@ public class NinjaService {
             .orElseThrow(() -> new NinjaNotFoundException(ninjaId));
         
         ninja.setLocked(false);
-        ninja.setLockReason(null);
-        ninja.setLockedAt(null);
-        
+
         ninja = ninjaRepository.save(ninja);
         
         // websocket notification because they probably refreshed
@@ -1111,7 +1077,6 @@ public class NinjaService {
         return ninja;
     }
 
-    // create a correction entry because admins make mistakes
     @Transactional
     public ProgressHistory createProgressHistoryCorrection(Long ninjaId, Long originalEntryId,
                                                           BeltType beltType, int level, int lesson,

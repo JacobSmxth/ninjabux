@@ -31,13 +31,6 @@ public class LedgerService {
     private NinjaRepository ninjaRepository;
 
 
-    // Configuration constants (can be moved to a config table later)
-    private static final int CONVERSION_LESSON_STEP = 10;
-    private static final int CONVERSION_LEGACY_COST = 10; // 10 Legacy (whole units)
-    private static final int CONVERSION_BUX_GRANT_QUARTERS = 8; // 2 Bux = 8 quarters
-    private static final int BELT_UP_REWARD_QUARTERS = 20; // 5.0 Bux = 20 quarters
-    private static final int INITIAL_BUX_GRANT_QUARTERS = 480; // 120 Bux = 480 quarters
-    
     // Level rewards (in quarters)
     private static final int WHITE_LEVEL_REWARD_QUARTERS = 8; // 2 Bux = 8 quarters
     private static final int YELLOW_LEVEL_REWARD_QUARTERS = 12; // 3 Bux = 12 quarters
@@ -45,25 +38,18 @@ public class LedgerService {
     private static final int GREEN_LEVEL_REWARD_QUARTERS = 20; // 5 Bux = 20 quarters
     private static final int BLUE_LEVEL_REWARD_QUARTERS = 24; // 6 Bux = 24 quarters
 
-    /**
-     * Calculate Bux balance from ledger entries
-     */
+
+    // WHY: remove cache complexity that caused stale balance issues under concurrent updates
+    // WHAT: always recalculate balance from ledger instead of using cached value
     public int getBuxBalanceQuarters(Long ninjaId) {
         Ninja ninja = ninjaRepository.findById(ninjaId)
             .orElseThrow(() -> new NinjaNotFoundException(ninjaId));
         
-        // Use cache if available and valid
-        if (ninja.getCachedBuxBalanceQuarters() != null) {
-            return ninja.getCachedBuxBalanceQuarters();
-        }
-        
+
         // Recalculate from ledger
         int balance = ledgerTxnRepository.sumAmountByNinja(ninja);
         
-        // Update cache
-        ninja.setCachedBuxBalanceQuarters(balance);
-        ninjaRepository.save(ninja);
-        
+
         return balance;
     }
 
