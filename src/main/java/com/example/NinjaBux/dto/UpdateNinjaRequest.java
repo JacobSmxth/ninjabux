@@ -9,7 +9,6 @@ public class UpdateNinjaRequest {
     private BeltType beltType;
     private Integer level;
     private Integer lesson;
-    private String adminNote;
 
     public UpdateNinjaRequest() {}
 
@@ -55,11 +54,4 @@ public class UpdateNinjaRequest {
         this.lesson = lesson;
     }
 
-    public String getAdminNote() {
-        return adminNote;
-    }
-
-    public void setAdminNote(String adminNote) {
-        this.adminNote = adminNote;
-    }
 }

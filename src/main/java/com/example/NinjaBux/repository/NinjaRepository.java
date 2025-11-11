@@ -16,8 +16,6 @@ import java.util.Optional;
 public interface NinjaRepository extends JpaRepository<Ninja, Long> {
     Optional<Ninja> findByFirstNameAndLastName(String firstName, String lastName);
     Optional<Ninja> findByUsernameIgnoreCase(String username);
-    List<Ninja> findAllByOrderByTotalBuxEarnedDesc(Pageable pageable);
-    List<Ninja> findAllByOrderByTotalBuxSpentDesc(Pageable pageable);
     
     // Pagination and filtering methods
     Page<Ninja> findAll(Pageable pageable);

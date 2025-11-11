@@ -1,6 +1,7 @@
 package com.example.NinjaBux.dto;
 
 import com.example.NinjaBux.domain.Purchase;
+import com.example.NinjaBux.domain.enums.PurchaseStatus;
 import java.time.LocalDateTime;
 
 public class PurchaseResponse {
@@ -12,7 +13,7 @@ public class PurchaseResponse {
     private String itemDescription;
     private int pricePaid;
     private LocalDateTime purchaseDate;
-    private boolean redeemed;
+    private PurchaseStatus status;
     private LocalDateTime redeemedDate;
 
     public PurchaseResponse(Purchase purchase) {
@@ -24,7 +25,7 @@ public class PurchaseResponse {
         this.itemDescription = purchase.getShopItem().getDescription();
         this.pricePaid = purchase.getPricePaid();
         this.purchaseDate = purchase.getPurchaseDate();
-        this.redeemed = purchase.isRedeemed();
+        this.status = purchase.getStatus();
         this.redeemedDate = purchase.getRedeemedDate();
     }
 
@@ -52,8 +53,8 @@ public class PurchaseResponse {
     public LocalDateTime getPurchaseDate() { return purchaseDate; }
     public void setPurchaseDate(LocalDateTime purchaseDate) { this.purchaseDate = purchaseDate; }
 
-    public boolean isRedeemed() { return redeemed; }
-    public void setRedeemed(boolean redeemed) { this.redeemed = redeemed; }
+    public PurchaseStatus getStatus() { return status; }
+    public void setStatus(PurchaseStatus status) { this.status = status; }
 
     public LocalDateTime getRedeemedDate() { return redeemedDate; }
     public void setRedeemedDate(LocalDateTime redeemedDate) { this.redeemedDate = redeemedDate; }

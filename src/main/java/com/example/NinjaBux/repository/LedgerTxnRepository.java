@@ -15,6 +15,12 @@ public interface LedgerTxnRepository extends JpaRepository<LedgerTxn, Long> {
     
     @Query("SELECT COALESCE(SUM(lt.amount), 0) FROM LedgerTxn lt WHERE lt.ninja = :ninja")
     int sumAmountByNinja(@Param("ninja") Ninja ninja);
+
+    @Query("SELECT COALESCE(SUM(CASE WHEN lt.amount > 0 THEN lt.amount ELSE 0 END), 0) FROM LedgerTxn lt WHERE lt.ninja = :ninja")
+    int sumEarnedAmountByNinja(@Param("ninja") Ninja ninja);
+
+    @Query("SELECT COALESCE(SUM(CASE WHEN lt.amount < 0 THEN lt.amount ELSE 0 END), 0) FROM LedgerTxn lt WHERE lt.ninja = :ninja")
+    int sumSpentAmountByNinja(@Param("ninja") Ninja ninja);
     
     List<LedgerTxn> findByNinjaAndSourceTypeOrderByCreatedAtDesc(Ninja ninja, com.example.NinjaBux.domain.enums.LedgerSourceType sourceType);
     
@@ -23,4 +29,3 @@ public interface LedgerTxnRepository extends JpaRepository<LedgerTxn, Long> {
     @Query("SELECT lt FROM LedgerTxn lt JOIN FETCH lt.ninja ORDER BY lt.createdAt DESC")
     List<LedgerTxn> findAllByOrderByCreatedAtDesc();
 }
-

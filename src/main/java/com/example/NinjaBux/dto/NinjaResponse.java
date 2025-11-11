@@ -11,10 +11,8 @@ public class NinjaResponse {
     private String firstName;
     private String lastName;
     private String username;
-    private double buxBalance;
+    private int buxBalance;
     private int legacyBalance;
-    private int totalBuxEarned;
-    private int totalBuxSpent;
     private BeltType currentBeltType;
     private int currentLevel;
     private int currentLesson;
@@ -22,10 +20,9 @@ public class NinjaResponse {
     private int totalQuestionsCorrect;
     private boolean suggestionsBanned;
     @JsonProperty("isLocked")
-    private boolean isLocked;
-    private String lockReason;
-    private LocalDateTime lockedAt;
-    private String adminNote;
+    private boolean locked;
+    private LocalDateTime createdAt;
+    private LocalDateTime lastProgressUpdate;
 
     public NinjaResponse() {}
 
@@ -35,34 +32,21 @@ public class NinjaResponse {
         this.lastName = ninja.getLastName();
         this.username = ninja.getUsername();
         
-        // Use ledger service to get actual balances
         if (ledgerService != null) {
-            // Round bux to whole numbers (no decimals)
-            double rawBux = ledgerService.getBuxBalance(ninja.getId());
-            this.buxBalance = Math.round(rawBux);
+            this.buxBalance = ledgerService.getBuxBalance(ninja.getId());
             this.legacyBalance = ledgerService.getLegacyBalance(ninja.getId());
-        } else {
-            // Fallback to deprecated fields if ledger service not available
-            this.buxBalance = ninja.getBuxBalance();
-            this.legacyBalance = 0;
         }
-        
-        // Keep deprecated fields for backwards compatibility (may be 0)
-        this.totalBuxEarned = ninja.getTotalBuxEarned();
-        this.totalBuxSpent = ninja.getTotalBuxSpent();
         this.currentBeltType = ninja.getCurrentBeltType();
         this.currentLevel = ninja.getCurrentLevel();
         this.currentLesson = ninja.getCurrentLesson();
         this.totalQuestionsAnswered = ninja.getTotalQuestionsAnswered();
         this.totalQuestionsCorrect = ninja.getTotalQuestionsCorrect();
         this.suggestionsBanned = ninja.isSuggestionsBanned();
-        this.isLocked = ninja.isLocked();
-        this.lockReason = ninja.getLockReason();
-        this.lockedAt = ninja.getLockedAt();
-        this.adminNote = ninja.getAdminNote();
+        this.locked = ninja.isLocked();
+        this.createdAt = ninja.getCreatedAt();
+        this.lastProgressUpdate = ninja.getLastProgressUpdate();
     }
     
-    // Legacy constructor for backwards compatibility (will use deprecated fields)
     public NinjaResponse(Ninja ninja) {
         this(ninja, null);
     }
@@ -93,10 +77,10 @@ public class NinjaResponse {
         this.username = username;
     }
 
-    public double getBuxBalance() {
+    public int getBuxBalance() {
         return buxBalance;
     }
-    public void setBuxBalance(double buxBalance) {
+    public void setBuxBalance(int buxBalance) {
         this.buxBalance = buxBalance;
     }
 
@@ -105,20 +89,6 @@ public class NinjaResponse {
     }
     public void setLegacyBalance(int legacyBalance) {
         this.legacyBalance = legacyBalance;
-    }
-
-    public int getTotalBuxEarned() {
-        return totalBuxEarned;
-    }
-    public void setTotalBuxEarned(int totalBuxEarned) {
-        this.totalBuxEarned = totalBuxEarned;
-    }
-
-    public int getTotalBuxSpent() {
-        return totalBuxSpent;
-    }
-    public void setTotalBuxSpent(int totalBuxSpent) {
-        this.totalBuxSpent = totalBuxSpent;
     }
 
     public BeltType getCurrentBeltType() {
@@ -164,32 +134,25 @@ public class NinjaResponse {
     }
 
     public boolean isLocked() {
-        return isLocked;
+        return locked;
     }
-    public void setLocked(boolean isLocked) {
-        this.isLocked = isLocked;
-    }
-
-    public String getLockReason() {
-        return lockReason;
-    }
-    public void setLockReason(String lockReason) {
-        this.lockReason = lockReason;
+    public void setLocked(boolean locked) {
+        this.locked = locked;
     }
 
-    public LocalDateTime getLockedAt() {
-        return lockedAt;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
-    public void setLockedAt(LocalDateTime lockedAt) {
-        this.lockedAt = lockedAt;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
-    public String getAdminNote() {
-        return adminNote;
+    public LocalDateTime getLastProgressUpdate() {
+        return lastProgressUpdate;
     }
 
-    public void setAdminNote(String adminNote) {
-        this.adminNote = adminNote;
+    public void setLastProgressUpdate(LocalDateTime lastProgressUpdate) {
+        this.lastProgressUpdate = lastProgressUpdate;
     }
 }

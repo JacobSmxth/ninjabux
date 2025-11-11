@@ -102,31 +102,31 @@ public class AnalyticsResponse {
     }
 
     public static class EconomyHealthMetrics {
-        private double totalBuxInCirculation;
-        private double totalBuxEarned;
-        private double totalBuxSpent;
+        private int totalBuxInCirculation;
+        private int totalBuxEarned;
+        private int totalBuxSpent;
         private double spendEarnRatio;
         private BalanceDistribution balanceDistribution;
         private Map<String, Integer> balanceByBelt;
 
-        public double getTotalBuxInCirculation() {
+        public int getTotalBuxInCirculation() {
             return totalBuxInCirculation;
         }
-        public void setTotalBuxInCirculation(double totalBuxInCirculation) {
+        public void setTotalBuxInCirculation(int totalBuxInCirculation) {
             this.totalBuxInCirculation = totalBuxInCirculation;
         }
 
-        public double getTotalBuxEarned() {
+        public int getTotalBuxEarned() {
             return totalBuxEarned;
         }
-        public void setTotalBuxEarned(double totalBuxEarned) {
+        public void setTotalBuxEarned(int totalBuxEarned) {
             this.totalBuxEarned = totalBuxEarned;
         }
 
-        public double getTotalBuxSpent() {
+        public int getTotalBuxSpent() {
             return totalBuxSpent;
         }
-        public void setTotalBuxSpent(double totalBuxSpent) {
+        public void setTotalBuxSpent(int totalBuxSpent) {
             this.totalBuxSpent = totalBuxSpent;
         }
 
@@ -440,4 +440,3 @@ public class AnalyticsResponse {
         }
     }
 }
-

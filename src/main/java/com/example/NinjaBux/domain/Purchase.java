@@ -6,86 +6,118 @@ import java.time.LocalDateTime;
 
 @Entity
 public class Purchase {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "ninja_id", nullable = false)
-    private Ninja ninja;
+  @ManyToOne
+  @JoinColumn(name = "ninja_id", nullable = false)
+  private Ninja ninja;
 
-    @ManyToOne
-    @JoinColumn(name = "shop_item_id", nullable = false)
-    private ShopItem shopItem;
+  @ManyToOne
+  @JoinColumn(name = "shop_item_id", nullable = false)
+  private ShopItem shopItem;
 
-    private int pricePaid;
+  private int pricePaid;
 
-    private LocalDateTime purchaseDate;
+  private LocalDateTime purchaseDate;
 
-    /**
-     * @deprecated Use status field instead. Kept for backwards compatibility.
-     */
-    @Deprecated
-    private boolean redeemed = false;
+  private LocalDateTime redeemedDate;
 
-    private LocalDateTime redeemedDate;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private PurchaseStatus status = PurchaseStatus.PURCHASED;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PurchaseStatus status = PurchaseStatus.PURCHASED;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "spend_txn_id")
+  private LedgerTxn spendTxn;
 
-    /**
-     * Reference to the LedgerTxn that recorded the spend
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "spend_txn_id")
-    private LedgerTxn spendTxn;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "refund_txn_id")
+  private LedgerTxn refundTxn;
 
-    /**
-     * Reference to the LedgerTxn that recorded the refund (if refunded)
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "refund_txn_id")
-    private LedgerTxn refundTxn;
+  public Purchase() {
+    this.purchaseDate = LocalDateTime.now();
+    this.status = PurchaseStatus.PURCHASED;
+  }
 
-    public Purchase() {
-        this.purchaseDate = LocalDateTime.now();
-        this.status = PurchaseStatus.PURCHASED;
-    }
+  public Purchase(Ninja ninja, ShopItem shopItem, int pricePaid) {
+    this.ninja = ninja;
+    this.shopItem = shopItem;
+    this.pricePaid = pricePaid;
+    this.purchaseDate = LocalDateTime.now();
+    this.status = PurchaseStatus.PURCHASED;
+  }
 
-    public Purchase(Ninja ninja, ShopItem shopItem, int pricePaid) {
-        this.ninja = ninja;
-        this.shopItem = shopItem;
-        this.pricePaid = pricePaid;
-        this.purchaseDate = LocalDateTime.now();
-        this.status = PurchaseStatus.PURCHASED;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Ninja getNinja() { return ninja; }
-    public void setNinja(Ninja ninja) { this.ninja = ninja; }
-    public ShopItem getShopItem() { return shopItem; }
-    public void setShopItem(ShopItem shopItem) { this.shopItem = shopItem; }
-    public int getPricePaid() { return pricePaid; }
-    public void setPricePaid(int pricePaid) { this.pricePaid = pricePaid; }
-    public LocalDateTime getPurchaseDate() { return purchaseDate; }
-    public void setPurchaseDate(LocalDateTime purchaseDate) { this.purchaseDate = purchaseDate; }
-    public boolean isRedeemed() { return redeemed; }
-    public void setRedeemed(boolean redeemed) { this.redeemed = redeemed; }
-    public LocalDateTime getRedeemedDate() { return redeemedDate; }
-    public void setRedeemedDate(LocalDateTime redeemedDate) { this.redeemedDate = redeemedDate; }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public PurchaseStatus getStatus() { return status; }
-    public void setStatus(PurchaseStatus status) { 
-        this.status = status;
-        // Keep redeemed boolean in sync for backwards compatibility
-        this.redeemed = (status == PurchaseStatus.REDEEMED);
-    }
+  public Ninja getNinja() {
+    return ninja;
+  }
 
-    public LedgerTxn getSpendTxn() { return spendTxn; }
-    public void setSpendTxn(LedgerTxn spendTxn) { this.spendTxn = spendTxn; }
+  public void setNinja(Ninja ninja) {
+    this.ninja = ninja;
+  }
 
-    public LedgerTxn getRefundTxn() { return refundTxn; }
-    public void setRefundTxn(LedgerTxn refundTxn) { this.refundTxn = refundTxn; }
+  public ShopItem getShopItem() {
+    return shopItem;
+  }
+
+  public void setShopItem(ShopItem shopItem) {
+    this.shopItem = shopItem;
+  }
+
+  public int getPricePaid() {
+    return pricePaid;
+  }
+
+  public void setPricePaid(int pricePaid) {
+    this.pricePaid = pricePaid;
+  }
+
+  public LocalDateTime getPurchaseDate() {
+    return purchaseDate;
+  }
+
+  public void setPurchaseDate(LocalDateTime purchaseDate) {
+    this.purchaseDate = purchaseDate;
+  }
+
+  public LocalDateTime getRedeemedDate() {
+    return redeemedDate;
+  }
+
+  public void setRedeemedDate(LocalDateTime redeemedDate) {
+    this.redeemedDate = redeemedDate;
+  }
+
+  public PurchaseStatus getStatus() {
+    return status;
+  }
+
+  public void setStatus(PurchaseStatus status) {
+    this.status = status;
+  }
+
+  public LedgerTxn getSpendTxn() {
+    return spendTxn;
+  }
+
+  public void setSpendTxn(LedgerTxn spendTxn) {
+    this.spendTxn = spendTxn;
+  }
+
+  public LedgerTxn getRefundTxn() {
+    return refundTxn;
+  }
+
+  public void setRefundTxn(LedgerTxn refundTxn) {
+    this.refundTxn = refundTxn;
+  }
 }
