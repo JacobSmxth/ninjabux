@@ -42,14 +42,14 @@ export default function Dashboard({ ninjaId }: Props) {
       setAllPurchases(allData);
       setProgressHistory(historyData);
       setTopAchievements(achievementsData);
-      
+
       // Update lock status
       if (ninjaData.isLocked) {
         setLockStatus(true, ninjaData.lockReason || 'Your account is locked. Please get back to work!');
       } else {
         setLockStatus(false, '');
       }
-      
+
       setError('');
 
       try {
@@ -149,8 +149,8 @@ export default function Dashboard({ ninjaId }: Props) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                boxShadow: bigQuestion && !bigQuestion.hasAnswered 
-                  ? `0 0 20px ${hexToRgba(beltTheme.primary, 0.5)}, 0 0 40px ${hexToRgba(beltTheme.primary, 0.3)}, 0 0 60px ${hexToRgba(beltTheme.primary, 0.2)}` 
+                boxShadow: bigQuestion && !bigQuestion.hasAnswered
+                  ? `0 0 20px ${hexToRgba(beltTheme.primary, 0.5)}, 0 0 40px ${hexToRgba(beltTheme.primary, 0.3)}, 0 0 60px ${hexToRgba(beltTheme.primary, 0.2)}`
                   : 'none',
                 animation: bigQuestion && !bigQuestion.hasAnswered ? 'pulse-glow-belt 2s ease-in-out infinite' : 'none',
                 '--belt-color': beltTheme.primary,
@@ -170,7 +170,7 @@ export default function Dashboard({ ninjaId }: Props) {
             color: beltTheme.secondary
           }}>
             <div className="balance-label">Balance</div>
-            <div className="balance-amount">{ninja.buxBalance.toFixed(2)} Bux</div>
+            <div className="balance-amount">{ninja.buxBalance} Bux</div>
             {ninja.legacyBalance !== undefined && ninja.legacyBalance > 0 && (
               <div className="balance-legacy" style={{ fontSize: '0.9rem', opacity: 0.9, marginTop: '0.25rem' }}>
                 {ninja.legacyBalance} Legacy

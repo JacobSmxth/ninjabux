@@ -34,13 +34,13 @@ export default function Leaderboard() {
 
   const getAchievementIcon = (iconName: string) => {
     if (!iconName) return <FiAward size={16} />;
-    
+
     // check if it's an emoji using unicode ranges
     const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B00}-\u{2BFF}]/u;
     if (emojiRegex.test(iconName)) {
       return <span style={{ fontSize: '18px', lineHeight: 1 }}>{iconName}</span>;
     }
-    
+
     // fallback to react icons for old achievements
     const icons: Record<string, any> = {
       'target': FiTarget,
@@ -65,21 +65,21 @@ export default function Leaderboard() {
     setExpandedSection(expandedSection === section ? null : section);
   };
 
-  const LeaderboardEntryComponent = ({ 
-    entry, 
-    value, 
-    valueLabel, 
+  const LeaderboardEntryComponent = ({
+    entry,
+    value,
+    valueLabel,
     isTop = false,
-    topIcon = null 
-  }: { 
-    entry: LeaderboardEntry; 
-    value: string | number; 
+    topIcon = null
+  }: {
+    entry: LeaderboardEntry;
+    value: string | number;
     valueLabel?: string;
     isTop?: boolean;
     topIcon?: string | null;
   }) => {
     const fullName = `${entry.firstName.charAt(0).toUpperCase() + entry.firstName.slice(1).toLowerCase()} ${entry.lastName.charAt(0).toUpperCase() + entry.lastName.slice(1).toLowerCase()}`;
-    
+
     return (
       <div className={`leaderboard-entry ${isTop ? 'top-1' : ''}`}>
         <div className="rank">#{entry.rank}</div>
@@ -393,14 +393,6 @@ export default function Leaderboard() {
                   <div className="leaderboard-section collapsed sidebar-button" onClick={() => toggleSection('quiz')}>
                     <div className="section-header">
                       <h2>Quiz Champions</h2>
-                    </div>
-                  </div>
-                )}
-
-                {expandedSection !== 'streak' && (
-                  <div className="leaderboard-section collapsed sidebar-button" onClick={() => toggleSection('streak')}>
-                    <div className="section-header">
-                      <h2>Streak Leaders</h2>
                     </div>
                   </div>
                 )}

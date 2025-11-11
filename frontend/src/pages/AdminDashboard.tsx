@@ -22,11 +22,11 @@ type TabType = 'activity' | 'ninjas' | 'shop' | 'question' | 'achievements' | 'a
 type OverviewSubTab = 'activity' | 'ledger' | 'announcement';
 
 // suggestion review component for pending questions
-function SuggestionReviewList({ 
-  suggestions, 
+function SuggestionReviewList({
+  suggestions,
   onReject,
   onBan
-}: { 
+}: {
   suggestions: any[]; // Can be BigQuestion or BigQuestionWithNinjaName
   onReject: (id: number, reason: string) => void;
   onBan: (ninjaId: number, banned: boolean) => void;
@@ -70,11 +70,11 @@ function SuggestionReviewList({
           const rejectState = rejectStates.get(suggestion.id || suggestion.question?.id);
           const showRejectInput = rejectState?.showInput || false;
           const rejectReason = rejectState?.reason || '';
-          
+
           const question = suggestion.question || suggestion;
           const questionId = question.id || suggestion.id;
           const ninjaName = suggestion.ninjaName || (question.suggestedByNinjaId ? `(ID: ${question.suggestedByNinjaId})` : '');
-          
+
           return (
             <div key={questionId} className="question-card" style={{ borderLeftColor: '#3B82F6', background: 'white' }}>
               <div className="question-header">
@@ -95,7 +95,7 @@ function SuggestionReviewList({
                   {!showRejectInput ? (
                     <>
                       {question.suggestedByNinjaId && (
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             const isBanned = (suggestion as any).suggestionsBanned || false;
@@ -107,8 +107,8 @@ function SuggestionReviewList({
                           {(suggestion as any).suggestionsBanned ? 'Unban' : 'Ban'}
                         </button>
                       )}
-                      <button 
-                        onClick={() => handleRejectClick(questionId)} 
+                      <button
+                        onClick={() => handleRejectClick(questionId)}
                         className="btn btn-sm btn-danger"
                       >
                         <FiTrash2 /> Reject
@@ -128,14 +128,14 @@ function SuggestionReviewList({
                         style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.875rem', flex: 1 }}
                         required
                       />
-                      <button 
+                      <button
                         onClick={() => handleRejectConfirm(questionId)}
                         className="btn btn-sm btn-danger"
                         disabled={!rejectReason.trim()}
                       >
                         Confirm
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleRejectCancel(questionId)}
                         className="btn btn-sm btn-secondary"
                       >
@@ -171,13 +171,13 @@ function SuggestionReviewList({
 export default function AdminDashboard({ onLogout, admin }: Props) {
   const navigate = useNavigate();
   const { toasts, removeToast, success, error: showError } = useToastContext();
-  
+
   // remember which tab admin was on so it persists across reloads
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const savedTab = localStorage.getItem('adminActiveTab');
     return (savedTab as TabType) || 'activity';
   });
-  
+
   // save tab preference whenever it changes
   useEffect(() => {
     localStorage.setItem('adminActiveTab', activeTab);
@@ -281,7 +281,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [assigningAchievement, setAssigningAchievement] = useState(false);
   const [selectedAchievementId, setSelectedAchievementId] = useState<number | null>(null);
   const [selectedNinjaForAchievement, setSelectedNinjaForAchievement] = useState<number | null>(null);
-  const [ninjaAchievements, setNinjaAchievements] = useState<Map<number, AchievementProgress[]>>(new Map());
+  const [setNinjaAchievements] = useState<Map<number, AchievementProgress[]>>(new Map());
 
   const [analytics, setAnalytics] = useState<any>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -419,14 +419,14 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     // Auto-fill form with suggestion data
     const today = new Date().toISOString().split('T')[0];
     const mondayDate = getMondayOfWeek(today);
-    
+
     // Fill in what we can from the suggestion
-    const choices = suggestion.choices && suggestion.choices.length > 0 
+    const choices = suggestion.choices && suggestion.choices.length > 0
       ? [...suggestion.choices, '', '', '', ''].slice(0, 4) // Pad to 4 choices
       : ['', '', '', ''];
-    
+
     setSelectedSuggestionId(suggestion.id);
-    
+
     if (!isCreatingQuestion && !editingQuestion) {
       setIsCreatingQuestion(true);
       setEditingQuestion(null);
@@ -434,7 +434,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
         setActiveTab('question');
       }
     }
-    
+
     setQuestionFormData({
       questionDate: mondayDate,
       questionText: suggestion.questionText || '',
@@ -450,9 +450,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       showError('Please provide a rejection reason');
       return;
     }
-    
+
     try {
-      await bigQuestionApi.rejectQuestion(questionId, { 
+      await bigQuestionApi.rejectQuestion(questionId, {
         adminUsername: admin?.username || '',
         reason: reason.trim()
       });
@@ -468,7 +468,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     setConfirmationModal({
       isOpen: true,
       title: banned ? 'Ban Ninja from Suggestions' : 'Unban Ninja from Suggestions',
-      message: banned 
+      message: banned
         ? 'Are you sure you want to ban this ninja from suggesting questions?'
         : 'Are you sure you want to unban this ninja from suggesting questions?',
       confirmText: banned ? 'Ban' : 'Unban',
@@ -758,7 +758,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
           data.suggestionId = selectedSuggestionId;
         }
         await bigQuestionApi.createQuestion(data);
-        
+
         if (selectedSuggestionId) {
           await loadPendingSuggestions();
           success('Question created and suggestion approved!');
@@ -770,7 +770,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
         await bigQuestionApi.updateQuestion(editingQuestion.id, data);
         success('Question updated successfully!');
       }
-      
+
       setIsCreatingQuestion(false);
       setEditingQuestion(null);
       loadQuestions();
@@ -1209,15 +1209,15 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   // Helper function to render achievement icons (emojis or React icons)
   const getAchievementIcon = (iconName: string, size: number = 16) => {
     if (!iconName) return <FiAward size={size} />;
-    
+
     // Check if it's an emoji (contains emoji characters)
-    // Includes: U+1F300-U+1F9FF (various emoji), U+2600-U+26FF (misc symbols), 
+    // Includes: U+1F300-U+1F9FF (various emoji), U+2600-U+26FF (misc symbols),
     // U+2700-U+27BF (dingbats), U+2B00-U+2BFF (misc symbols and arrows including ⭐)
     const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B00}-\u{2BFF}]/u;
     if (emojiRegex.test(iconName)) {
       return <span style={{ fontSize: `${size + 2}px`, lineHeight: 1 }}>{iconName}</span>;
     }
-    
+
     // Otherwise, map to React icons (for backward compatibility)
     const icons: Record<string, any> = {
       'target': FiTarget,
@@ -1353,7 +1353,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                     <FiDollarSign />
                   </div>
                 </div>
-                <div className="stat-card-value">{totalBuxInCirculation.toFixed(2)}</div>
+                <div className="stat-card-value">{totalBuxInCirculation}</div>
                 <div className="stat-card-label">Bux in Circulation</div>
               </div>
 
@@ -1469,7 +1469,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                             <td>{txn.ninjaFirstName} {txn.ninjaLastName}</td>
                             <td><span className="badge badge-gray">{txn.type}</span></td>
                             <td style={{ color: txn.amount > 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
-                              {txn.amount > 0 ? '+' : ''}{(txn.amount / 4).toFixed(2)} Bux
+                              {txn.amount > 0 ? '+' : ''}{(txn.amount)} Bux
                             </td>
                             <td>{txn.sourceType}</td>
                             <td>{txn.note || '-'}</td>
@@ -1956,8 +1956,8 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
           </div>
 
           {/* Pending Suggestions Section */}
-          {showSuggestions && !isCreatingQuestion && !editingQuestion && <SuggestionReviewList 
-            suggestions={pendingSuggestions} 
+          {showSuggestions && !isCreatingQuestion && !editingQuestion && <SuggestionReviewList
+            suggestions={pendingSuggestions}
             onReject={handleRejectSuggestion}
             onBan={handleBanSuggestions}
           />}
@@ -1968,7 +1968,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
               <div style={{ display: 'flex', gap: '1rem', width: '100%', maxWidth: '1400px', margin: '0 auto' }}>
                 {/* Suggestions Sidebar */}
                 {pendingSuggestions.length > 0 && (
-                  <div 
+                  <div
                     onClick={(e) => e.stopPropagation()}
                     style={{ width: '300px', background: 'white', borderRadius: '8px', padding: '1rem', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                   >
@@ -1978,7 +1978,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                         const question: BigQuestion = (suggestion as any).question || suggestion;
                         const ninjaName = (suggestion as any).ninjaName || (question.suggestedByNinjaId ? `(ID: ${question.suggestedByNinjaId})` : '');
                         const isSelected = selectedSuggestionId === question.id;
-                        
+
                         return (
                           <div
                             key={question.id}
@@ -2019,7 +2019,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Form */}
                 <div className="form-section modal" onClick={(e) => e.stopPropagation()} style={{ flex: 1 }}>
                   <div className="form-section-header">
@@ -2436,15 +2436,15 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                   </div>
                   </div>
                   <div className="form-actions">
-                    <button 
-                      className="btn btn-primary" 
+                    <button
+                      className="btn btn-primary"
                       onClick={handleAssignAchievement}
                       disabled={!selectedAchievementId || !selectedNinjaForAchievement}
                     >
                       <FiAward /> Award Achievement
                     </button>
-                    <button 
-                      className="btn btn-secondary" 
+                    <button
+                      className="btn btn-secondary"
                       onClick={() => {
                         setAssigningAchievement(false);
                         setSelectedAchievementId(null);
@@ -2616,7 +2616,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                           <div key={stall.ninjaId} className="stall-item">
                             <span className="stall-name">{stall.ninjaName}</span>
                             <span className="stall-days">{stall.daysStalled} days</span>
-                            <button 
+                            <button
                               onClick={() => navigate(`/ninja/${stall.ninjaId}`)}
                               className="btn btn-sm btn-primary"
                             >
