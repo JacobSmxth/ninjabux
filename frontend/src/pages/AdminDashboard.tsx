@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, bigQuestionApi, adminApi, achievementApi, analyticsApi, ledgerApi } from '../services/api';
-import type { Ninja, BeltType, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest, AwardAchievementRequest, AchievementProgress } from '../types';
+import type { Ninja, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest, AwardAchievementRequest, AchievementProgress } from '../types';
 import { FiEdit2, FiTrash2, FiPause, FiPlay, FiUsers, FiShoppingBag, FiHelpCircle, FiAward, FiSettings, FiSearch, FiPlus, FiDollarSign, FiShoppingCart, FiTarget, FiStar, FiTrendingUp, FiZap, FiClock, FiLock, FiCheck } from 'react-icons/fi';
 import { useToastContext } from '../context/ToastContext';
 import Toast from '../components/Toast';
 import ConfirmationModal from '../components/ConfirmationModal';
 import NinjaFormModal, { type NinjaFormValues } from '../components/NinjaFormModal';
+import AchievementIcon from '../components/AchievementIcon';
 import { INITIAL_NINJA_PROGRESS, normalizeProgress } from '../utils/ninjaProgress';
 import './AdminDashboard.css';
 
@@ -1241,34 +1242,6 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     }
   }, [searchQuery, ninjaBeltFilter, ninjaLockedFilter]);
 
-  // Helper function to render achievement icons (emojis or React icons)
-  const getAchievementIcon = (iconName: string, size: number = 16) => {
-    if (!iconName) return <FiAward size={size} />;
-
-    // Check if it's an emoji (contains emoji characters)
-    // Includes: U+1F300-U+1F9FF (various emoji), U+2600-U+26FF (misc symbols),
-    // U+2700-U+27BF (dingbats), U+2B00-U+2BFF (misc symbols and arrows including ⭐)
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B00}-\u{2BFF}]/u;
-    if (emojiRegex.test(iconName)) {
-      return <span style={{ fontSize: `${size + 2}px`, lineHeight: 1 }}>{iconName}</span>;
-    }
-
-    // Otherwise, map to React icons (for backward compatibility)
-    const icons: Record<string, any> = {
-      'target': FiTarget,
-      'star': FiStar,
-      'trending': FiTrendingUp,
-      'zap': FiZap,
-      'lightning': FiZap,
-      'clock': FiClock,
-      'award': FiAward,
-      'dollar': FiDollarSign,
-      'check': FiCheck,
-    };
-    const Icon = icons[iconName?.toLowerCase()] || FiAward;
-    return <Icon size={size} />;
-  };
-
   if (loading && ninjas.length === 0 && shopItems.length === 0 && questions.length === 0) {
     return (
       <div className="admin-container">
@@ -2450,7 +2423,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                       color: 'var(--gray-600)',
                       flexShrink: 0
                     }}>
-                      {getAchievementIcon(achievement.icon, 24)}
+                      <AchievementIcon icon={achievement.icon} size={24} />
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <h3 className="card-title" style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>

@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { ninjaApi } from '../services/api';
 import type { LeaderboardResponse, LeaderboardEntry, BadgeRarity } from '../types';
-import { FiStar, FiTarget, FiTrendingUp, FiZap, FiClock, FiAward, FiDollarSign, FiCheck, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FaCrown, FaTrophy } from 'react-icons/fa';
+import AchievementIcon from '../components/AchievementIcon';
 import './Leaderboard.css';
 
 type TimePeriod = 'daily' | 'week' | 'month' | 'lifetime';
@@ -32,31 +34,6 @@ export default function Leaderboard() {
     }
   };
 
-  const getAchievementIcon = (iconName: string) => {
-    if (!iconName) return <FiAward size={16} />;
-
-    // check if it's an emoji using unicode ranges
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B00}-\u{2BFF}]/u;
-    if (emojiRegex.test(iconName)) {
-      return <span style={{ fontSize: '18px', lineHeight: 1 }}>{iconName}</span>;
-    }
-
-    // fallback to react icons for old achievements
-    const icons: Record<string, any> = {
-      'target': FiTarget,
-      'star': FiStar,
-      'trending': FiTrendingUp,
-      'zap': FiZap,
-      'lightning': FiZap,
-      'clock': FiClock,
-      'award': FiAward,
-      'dollar': FiDollarSign,
-      'check': FiCheck,
-    };
-    const Icon = icons[iconName?.toLowerCase()] || FiAward;
-    return <Icon size={16} />;
-  };
-
   const getRarityGlowClass = (rarity: BadgeRarity) => {
     return `badge-glow rarity-${rarity}`;
   };
@@ -76,7 +53,7 @@ export default function Leaderboard() {
     value: string | number;
     valueLabel?: string;
     isTop?: boolean;
-    topIcon?: string | null;
+    topIcon?: ReactNode;
   }) => {
     const fullName = `${entry.firstName.charAt(0).toUpperCase() + entry.firstName.slice(1).toLowerCase()} ${entry.lastName.charAt(0).toUpperCase() + entry.lastName.slice(1).toLowerCase()}`;
 
@@ -94,7 +71,7 @@ export default function Leaderboard() {
                   className={`leaderboard-badge ${getRarityGlowClass(entry.leaderboardBadge.achievement.rarity)}`}
                   title={entry.leaderboardBadge.achievement.name}
                 >
-                  {getAchievementIcon(entry.leaderboardBadge.achievement.icon)}
+                  <AchievementIcon icon={entry.leaderboardBadge.achievement.icon} />
                 </div>
               </div>
             )}
@@ -180,7 +157,7 @@ export default function Leaderboard() {
                       value={entry.totalBuxEarned}
                       valueLabel="$"
                       isTop={entry.isTopEarner}
-                      topIcon="👑"
+                      topIcon={<FaCrown />}
                     />
                   ))
                 )}
@@ -210,7 +187,7 @@ export default function Leaderboard() {
                       value={entry.totalBuxSpent}
                       valueLabel="$"
                       isTop={entry.isTopSpender}
-                      topIcon="🏆"
+                      topIcon={<FaTrophy />}
                     />
                   ))
                 )}

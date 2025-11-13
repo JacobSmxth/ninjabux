@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { achievementApi } from '../services/api';
-import type { AchievementProgress, AchievementCategory, BadgeRarity } from '../types';
-import { FiAward, FiLock, FiFilter, FiTarget, FiStar, FiTrendingUp, FiZap, FiClock, FiDollarSign, FiCheck } from 'react-icons/fi';
+import type { AchievementProgress, AchievementCategory } from '../types';
+import { FiAward, FiLock, FiFilter, FiDollarSign } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
+import AchievementIcon from '../components/AchievementIcon';
 import './AchievementGallery.css';
 
 interface Props {
@@ -92,32 +93,6 @@ export default function AchievementGallery({ ninjaId }: Props) {
 
   const stats = getStats();
 
-  // achievement icon helper, same logic as leaderboard
-  const getAchievementIcon = (iconName: string, size: number = 16) => {
-    if (!iconName) return <FiAward size={size} />;
-    
-    // check if it's an emoji using unicode ranges
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B00}-\u{2BFF}]/u;
-    if (emojiRegex.test(iconName)) {
-      return <span style={{ fontSize: `${size + 2}px`, lineHeight: 1 }}>{iconName}</span>;
-    }
-    
-    // fallback to react icons for old achievements
-    const icons: Record<string, any> = {
-      'target': FiTarget,
-      'star': FiStar,
-      'trending': FiTrendingUp,
-      'zap': FiZap,
-      'lightning': FiZap,
-      'clock': FiClock,
-      'award': FiAward,
-      'dollar': FiDollarSign,
-      'check': FiCheck,
-    };
-    const Icon = icons[iconName?.toLowerCase()] || FiAward;
-    return <Icon size={size} />;
-  };
-
   if (loading) {
     return (
       <div className="gallery-container">
@@ -199,7 +174,7 @@ export default function AchievementGallery({ ninjaId }: Props) {
               </div>
             )}
             <div className={`achievement-icon-gallery ${!progress.unlocked ? 'locked-icon' : ''}`}>
-              {getAchievementIcon(progress.achievement.icon, 48)}
+              <AchievementIcon icon={progress.achievement.icon} size={48} />
             </div>
             <div className="achievement-info">
               <div className="achievement-category-badge">{categoryLabels[progress.achievement.category]}</div>
@@ -208,7 +183,7 @@ export default function AchievementGallery({ ninjaId }: Props) {
               <div className="achievement-footer">
                 {progress.achievement.buxReward > 0 && (
                   <div className="achievement-reward-badge">
-                    💰 {progress.achievement.buxReward} Bux
+                    <FiDollarSign style={{ marginRight: '0.25rem' }} /> {progress.achievement.buxReward} Bux
                   </div>
                 )}
                 <div className={`rarity-badge rarity-${progress.achievement.rarity}`}>

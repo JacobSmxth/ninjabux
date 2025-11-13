@@ -14,15 +14,34 @@ import { useToastContext } from './context/ToastContext';
 import { useWebSocket } from './hooks/useWebSocket';
 import { ToastProvider } from './context/ToastContext';
 import { LockProvider, useLockContext } from './context/LockContext';
-import { ninjaApi } from './services/api';
-import type { Admin, Ninja } from './types';
+import type { Admin } from './types';
 import { FiLock } from 'react-icons/fi';
 import './App.css';
+
+function ToastHost() {
+  const { toasts, removeToast } = useToastContext();
+
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="toast-container">
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          title={toast.title}
+          duration={toast.duration}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
+    </div>
+  );
+}
 
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toasts, removeToast } = useToastContext();
   const { isLocked, lockMessage, setLockStatus, checkLockStatus } = useLockContext();
 
   const [selectedNinjaId, setSelectedNinjaId] = useState<number | null>(() => {
@@ -34,12 +53,6 @@ function AppContent() {
     const saved = localStorage.getItem('admin');
     return saved ? JSON.parse(saved) : null;
   });
-
-  const [isAdminMode, setIsAdminMode] = useState(() => {
-    return localStorage.getItem('isAdminMode') === 'true';
-  });
-
-  const [currentNinja, setCurrentNinja] = useState<any>(null);
 
   const handleLockStatusChange = (locked: boolean, message: string) => {
     setLockStatus(locked, message);
@@ -56,7 +69,6 @@ function AppContent() {
       return () => clearInterval(interval);
     } else {
       setLockStatus(false, '');
-      setCurrentNinja(null);
     }
   }, [selectedNinjaId, location.pathname, checkLockStatus, setLockStatus]);
 
@@ -82,10 +94,6 @@ function AppContent() {
     }
   }, [admin]);
 
-  useEffect(() => {
-    localStorage.setItem('isAdminMode', isAdminMode.toString());
-  }, [isAdminMode]);
-
   const handleLogout = () => {
     setSelectedNinjaId(null);
     localStorage.removeItem('selectedNinjaId');
@@ -94,9 +102,7 @@ function AppContent() {
 
   const handleAdminLogout = () => {
     setAdmin(null);
-    setIsAdminMode(false);
     localStorage.removeItem('admin');
-    localStorage.removeItem('isAdminMode');
     navigate('/admin-login', { replace: true });
   };
 
@@ -113,18 +119,7 @@ function AppContent() {
     if (!admin) {
       return (
         <>
-          <div className="toast-container">
-            {toasts.map((toast) => (
-              <Toast
-                key={toast.id}
-                message={toast.message}
-                type={toast.type}
-                title={toast.title}
-                duration={toast.duration}
-                onClose={() => removeToast(toast.id)}
-              />
-            ))}
-          </div>
+          <ToastHost />
           <Routes>
             <Route path="/admin" element={<AdminLogin onLogin={setAdmin} />} />
             <Route path="/admin-login" element={<AdminLogin onLogin={setAdmin} />} />
@@ -135,18 +130,7 @@ function AppContent() {
     }
     return (
       <>
-        <div className="toast-container">
-          {toasts.map((toast) => (
-            <Toast
-              key={toast.id}
-              message={toast.message}
-              type={toast.type}
-              title={toast.title}
-              duration={toast.duration}
-              onClose={() => removeToast(toast.id)}
-            />
-          ))}
-        </div>
+        <ToastHost />
         <Routes>
           <Route path="/admin" element={<AdminDashboard onLogout={handleAdminLogout} admin={admin} />} />
           <Route path="/admin/ninja/:id" element={<NinjaDetail />} />
@@ -159,18 +143,7 @@ function AppContent() {
   if (!selectedNinjaId) {
     return (
       <>
-        <div className="toast-container">
-          {toasts.map((toast) => (
-            <Toast
-              key={toast.id}
-              message={toast.message}
-              type={toast.type}
-              title={toast.title}
-              duration={toast.duration}
-              onClose={() => removeToast(toast.id)}
-            />
-          ))}
-        </div>
+        <ToastHost />
         <Login onLogin={setSelectedNinjaId} onSwitchToAdmin={switchToAdmin} />
       </>
     );
@@ -178,18 +151,7 @@ function AppContent() {
 
   return (
     <div className="app">
-      <div className="toast-container">
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            message={toast.message}
-            type={toast.type}
-            title={toast.title}
-            duration={toast.duration}
-            onClose={() => removeToast(toast.id)}
-          />
-        ))}
-      </div>
+      <ToastHost />
 
       {/* Lock Overlay - covers entire screen */}
       {isLocked && (

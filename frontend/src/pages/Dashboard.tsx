@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, bigQuestionApi, achievementApi } from '../services/api';
 import type { Ninja, Purchase, BigQuestionResponse, ProgressHistory, AchievementProgress } from '../types';
-import { FiAward, FiHelpCircle } from 'react-icons/fi';
+import { FiAward, FiHelpCircle, FiDollarSign } from 'react-icons/fi';
 import { useLockContext } from '../context/LockContext';
+import AchievementIcon from '../components/AchievementIcon';
 import './Dashboard.css';
 
 
@@ -198,13 +199,15 @@ export default function Dashboard({ ninjaId }: Props) {
                                progress.achievement.rarity === 'RARE' ? '#3B82F6' : '#9CA3AF'
                 }}
               >
-                <div className="achievement-icon-large">{progress.achievement.icon}</div>
+                <div className="achievement-icon-large">
+                  <AchievementIcon icon={progress.achievement.icon} size={36} />
+                </div>
                 <div className="achievement-details">
                   <h4>{progress.achievement.name}</h4>
                   <p>{progress.achievement.description}</p>
                   {progress.achievement.buxReward > 0 && (
                     <div className="achievement-reward" style={{ color: '#000000' }}>
-                      💰 {progress.achievement.buxReward} Bux
+                      <FiDollarSign style={{ marginRight: '0.25rem' }} /> {progress.achievement.buxReward} Bux
                     </div>
                   )}
                 </div>

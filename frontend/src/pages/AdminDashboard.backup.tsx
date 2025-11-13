@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, bigQuestionApi, adminApi, achievementApi } from '../services/api';
 import type { Ninja, BeltType, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest } from '../types';
 import { FiEdit2, FiTrash2, FiPause, FiPlay } from 'react-icons/fi';
+import AchievementIcon from '../components/AchievementIcon';
 import './AdminDashboard.css';
 
 interface Props {
@@ -1360,7 +1361,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
               <div key={achievement.id} className={`achievement-card rarity-${achievement.rarity}`}>
                 <div className="item-header">
                   <div className="achievement-header">
-                    <span className="achievement-icon">{achievement.icon}</span>
+                    <span className="achievement-icon">
+                      <AchievementIcon icon={achievement.icon} size={24} />
+                    </span>
                     <div>
                       <h3 style={{ margin: 0, marginBottom: '0.25rem' }}>{achievement.name}</h3>
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>

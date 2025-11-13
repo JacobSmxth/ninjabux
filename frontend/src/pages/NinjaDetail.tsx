@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, achievementApi } from '../services/api';
 import type { Ninja, Purchase, BeltType, ProgressHistory, AchievementProgress, ProgressHistoryCorrectionRequest } from '../types';
+import { beltOrder, getMaxLessonsForLevel, getMaxLevelsForBelt } from '../utils/ninjaProgress';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ProgressHistoryEditModal from '../components/ProgressHistoryEditModal';
+import AchievementIcon from '../components/AchievementIcon';
 import './NinjaDetail.css';
 
 export default function NinjaDetail() {
@@ -103,8 +105,7 @@ export default function NinjaDetail() {
       // figure out max lessons because belt system is complicated
       const maxLessonsForLevel = getMaxLessonsForLevel(ninja.currentBeltType, ninja.currentLevel);
       const maxLevelsForBelt = getMaxLevelsForBelt(ninja.currentBeltType);
-      const belts: BeltType[] = ['WHITE', 'YELLOW', 'ORANGE', 'GREEN', 'BLUE', 'PURPLE', 'RED', 'BROWN', 'BLACK'];
-      const currentBeltIndex = belts.indexOf(ninja.currentBeltType);
+      const currentBeltIndex = beltOrder.indexOf(ninja.currentBeltType);
       
       let newBelt = ninja.currentBeltType;
       let newLevel = ninja.currentLevel;
@@ -117,9 +118,9 @@ export default function NinjaDetail() {
         // move to next level, reset lesson
         newLevel = ninja.currentLevel + 1;
         newLesson = 1;
-      } else if (currentBeltIndex < belts.length - 1) {
+      } else if (currentBeltIndex < beltOrder.length - 1) {
         // move to next belt, reset everything
-        newBelt = belts[currentBeltIndex + 1];
+        newBelt = beltOrder[currentBeltIndex + 1];
         newLevel = 1;
         newLesson = 1;
       } else {
@@ -138,40 +139,6 @@ export default function NinjaDetail() {
       alert(errorMessage);
       console.error(err);
     }
-  };
-
-  const getMaxLessonsForLevel = (beltType: BeltType, level: number): number => {
-    const lessonsPerLevel: Record<BeltType, number[]> = {
-      'WHITE': [8, 8, 8, 8, 8, 8, 8, 8],
-      'YELLOW': [8, 8, 11, 8, 8, 11, 11, 8, 11, 7],
-      'ORANGE': [11, 11, 11, 11, 8, 8, 11, 11, 11, 11, 11, 10],
-      'GREEN': [8, 8, 11, 11, 17, 11, 11, 8, 8, 10],
-      'BLUE': [10, 13, 1],
-      'PURPLE': [8, 8, 8, 8, 8, 8, 8, 8], // Default fallback
-      'RED': [8, 8, 8, 8, 8, 8, 8, 8],
-      'BROWN': [8, 8, 8, 8, 8, 8, 8, 8],
-      'BLACK': [8, 8, 8, 8, 8, 8, 8, 8],
-    };
-    
-    const lessons = lessonsPerLevel[beltType] || [8];
-    if (level <= 0 || level > lessons.length) return 8; // Default fallback
-    return lessons[level - 1];
-  };
-
-  const getMaxLevelsForBelt = (beltType: BeltType): number => {
-    const levelsPerBelt: Record<BeltType, number> = {
-      'WHITE': 8,
-      'YELLOW': 10,
-      'ORANGE': 12,
-      'GREEN': 10,
-      'BLUE': 3,
-      'PURPLE': 8, // Default fallback
-      'RED': 8,
-      'BROWN': 8,
-      'BLACK': 8,
-    };
-    
-    return levelsPerBelt[beltType] || 8;
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -767,7 +734,7 @@ export default function NinjaDetail() {
                       }}
                     >
                       <div style={{ fontSize: '2rem', textAlign: 'center', marginBottom: '0.5rem' }}>
-                        {progress.achievement.icon}
+                        <AchievementIcon icon={progress.achievement.icon} size={32} />
                       </div>
                       <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600 }}>
                         {progress.achievement.name}
