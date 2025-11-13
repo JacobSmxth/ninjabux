@@ -6,6 +6,8 @@ import { FiEdit2, FiTrash2, FiPause, FiPlay, FiUsers, FiShoppingBag, FiHelpCircl
 import { useToastContext } from '../context/ToastContext';
 import Toast from '../components/Toast';
 import ConfirmationModal from '../components/ConfirmationModal';
+import NinjaFormModal, { type NinjaFormValues } from '../components/NinjaFormModal';
+import { INITIAL_NINJA_PROGRESS, normalizeProgress } from '../utils/ninjaProgress';
 import './AdminDashboard.css';
 
 interface Props {
@@ -207,14 +209,16 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [editingNinja, setEditingNinja] = useState<Ninja | null>(null);
   const [isCreatingNinja, setIsCreatingNinja] = useState(false);
   const [selectedNinja, setSelectedNinja] = useState<NinjaWithPurchases | null>(null);
-  const [ninjaFormData, setNinjaFormData] = useState({
+  const createEmptyNinjaForm = (): NinjaFormValues => ({
     firstName: '',
     lastName: '',
     username: '',
-    currentBeltType: 'WHITE' as BeltType,
-    currentLevel: 0,
-    currentLesson: 0,
+    beltType: INITIAL_NINJA_PROGRESS.beltType,
+    level: INITIAL_NINJA_PROGRESS.level,
+    lesson: INITIAL_NINJA_PROGRESS.lesson,
   });
+  const [ninjaFormInitialValues, setNinjaFormInitialValues] = useState<NinjaFormValues>(createEmptyNinjaForm());
+  const [ninjaFormSubmitting, setNinjaFormSubmitting] = useState(false);
 
   const [editingItem, setEditingItem] = useState<ShopItem | null>(null);
   const [isCreatingItem, setIsCreatingItem] = useState(false);
@@ -528,47 +532,78 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const handleCreateNinja = () => {
     setIsCreatingNinja(true);
     setEditingNinja(null);
-    setNinjaFormData({
-      firstName: '',
-      lastName: '',
-      username: '',
-      currentBeltType: 'WHITE',
-      currentLevel: 0,
-      currentLesson: 0,
+    setNinjaFormInitialValues(createEmptyNinjaForm());
+  };
+
+  const handleEditNinja = (ninja: Ninja) => {
+    setEditingNinja(ninja);
+    setIsCreatingNinja(false);
+    setNinjaFormInitialValues({
+      firstName: ninja.firstName,
+      lastName: ninja.lastName,
+      username: ninja.username,
+      beltType: ninja.currentBeltType,
+      level: ninja.currentLevel || INITIAL_NINJA_PROGRESS.level,
+      lesson: ninja.currentLesson || INITIAL_NINJA_PROGRESS.lesson,
     });
   };
 
-  const handleSubmitNinja = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const closeNinjaForm = () => {
+    setIsCreatingNinja(false);
+    setEditingNinja(null);
+  };
+
+  const handleNinjaFormSubmit = async (values: NinjaFormValues) => {
+    const trimmed = {
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      username: values.username.trim(),
+      beltType: values.beltType,
+      level: values.level,
+      lesson: values.lesson,
+    };
+
+    if (!trimmed.firstName || !trimmed.lastName || !trimmed.username) {
+      showError('Please complete all required fields');
+      return;
+    }
+
+    const normalized = normalizeProgress(trimmed.beltType, trimmed.level, trimmed.lesson);
+
     try {
+      setNinjaFormSubmitting(true);
       if (isCreatingNinja) {
         await ninjaApi.create({
-          firstName: ninjaFormData.firstName,
-          lastName: ninjaFormData.lastName,
-          username: ninjaFormData.username,
-          beltType: ninjaFormData.currentBeltType,
-          level: ninjaFormData.currentLevel,
-          lesson: ninjaFormData.currentLesson,
+          firstName: trimmed.firstName,
+          lastName: trimmed.lastName,
+          username: trimmed.username,
+          beltType: normalized.beltType,
+          level: normalized.level,
+          lesson: normalized.lesson,
         });
         success('Ninja created successfully!');
       } else if (editingNinja) {
         await ninjaApi.update(editingNinja.id, {
-          firstName: ninjaFormData.firstName,
-          lastName: ninjaFormData.lastName,
-          username: ninjaFormData.username,
-          beltType: ninjaFormData.currentBeltType,
-          level: ninjaFormData.currentLevel,
-          lesson: ninjaFormData.currentLesson,
+          firstName: trimmed.firstName,
+          lastName: trimmed.lastName,
+          username: trimmed.username,
+          beltType: normalized.beltType,
+          level: normalized.level,
+          lesson: normalized.lesson,
         });
         success('Ninja updated successfully!');
+      } else {
+        showError('No ninja selected for editing');
+        return;
       }
-      setIsCreatingNinja(false);
-      setEditingNinja(null);
-      loadNinjas();
+      closeNinjaForm();
+      await loadNinjas();
     } catch (err: any) {
       const errorMessage = err.message || err.response?.data?.message || 'Failed to save ninja';
       showError(errorMessage);
       console.error(err);
+    } finally {
+      setNinjaFormSubmitting(false);
     }
   };
 
@@ -1561,83 +1596,14 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
           </div>
 
           {(isCreatingNinja || editingNinja) && (
-            <div className="modal-backdrop" onClick={() => { setIsCreatingNinja(false); setEditingNinja(null); }}>
-              <div className="form-section modal" onClick={(e) => e.stopPropagation()}>
-                <div className="form-section-header">
-                  <h3>{isCreatingNinja ? 'Create New Ninja' : 'Edit Ninja'}</h3>
-                </div>
-                <form onSubmit={handleSubmitNinja}>
-                <div className="form-grid">
-                  <div className="form-field">
-                    <label>First Name</label>
-                    <input
-                      type="text"
-                      value={ninjaFormData.firstName}
-                      onChange={(e) => setNinjaFormData({ ...ninjaFormData, firstName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Last Name</label>
-                    <input
-                      type="text"
-                      value={ninjaFormData.lastName}
-                      onChange={(e) => setNinjaFormData({ ...ninjaFormData, lastName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Username</label>
-                    <input
-                      type="text"
-                      value={ninjaFormData.username}
-                      onChange={(e) => setNinjaFormData({ ...ninjaFormData, username: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Belt</label>
-                    <select
-                      value={ninjaFormData.currentBeltType}
-                      onChange={(e) => setNinjaFormData({ ...ninjaFormData, currentBeltType: e.target.value as BeltType })}
-                    >
-                      <option value="WHITE">White</option>
-                      <option value="YELLOW">Yellow</option>
-                      <option value="ORANGE">Orange</option>
-                      <option value="GREEN">Green</option>
-                      <option value="BLUE">Blue</option>
-                      <option value="PURPLE" disabled style={{color: '#999'}}>Purple (Coming Soon)</option>
-                      <option value="RED" disabled style={{color: '#999'}}>Red (Coming Soon)</option>
-                      <option value="BROWN" disabled style={{color: '#999'}}>Brown (Coming Soon)</option>
-                      <option value="BLACK" disabled style={{color: '#999'}}>Black (Coming Soon)</option>
-                    </select>
-                  </div>
-                  <div className="form-field">
-                    <label>Level</label>
-                    <input
-                      type="number"
-                      value={ninjaFormData.currentLevel}
-                      onChange={(e) => setNinjaFormData({ ...ninjaFormData, currentLevel: parseInt(e.target.value) })}
-                      min="0"
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Lesson</label>
-                    <input
-                      type="number"
-                      value={ninjaFormData.currentLesson}
-                      onChange={(e) => setNinjaFormData({ ...ninjaFormData, currentLesson: parseInt(e.target.value) })}
-                      min="0"
-                    />
-                  </div>
-                </div>
-                  <div className="form-actions">
-                    <button type="submit" className="btn btn-primary">Save</button>
-                    <button type="button" onClick={() => { setIsCreatingNinja(false); setEditingNinja(null); }} className="btn btn-secondary">Cancel</button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <NinjaFormModal
+              isOpen={Boolean(isCreatingNinja || editingNinja)}
+              mode={isCreatingNinja ? 'create' : 'edit'}
+              initialValues={ninjaFormInitialValues}
+              isSubmitting={ninjaFormSubmitting}
+              onClose={closeNinjaForm}
+              onSubmit={handleNinjaFormSubmit}
+            />
           )}
 
           {/* Filters and Sort - Collapsible */}
@@ -1767,6 +1733,13 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                       ) : '-'}
                     </td>
                     <td onClick={(e) => e.stopPropagation()} className="row-actions">
+                      <button
+                        onClick={() => handleEditNinja(ninja)}
+                        className="btn-icon"
+                        title="Edit"
+                      >
+                        <FiEdit2 />
+                      </button>
                       <button
                         onClick={() => handleDeleteNinja(ninja.id, `${ninja.firstName} ${ninja.lastName}`)}
                         className="btn-icon"
