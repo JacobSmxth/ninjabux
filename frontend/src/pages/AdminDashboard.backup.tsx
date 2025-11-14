@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, bigQuestionApi, adminApi, achievementApi } from '../services/api';

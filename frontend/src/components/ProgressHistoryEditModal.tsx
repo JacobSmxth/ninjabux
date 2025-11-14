@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import type { ProgressHistory, ProgressHistoryCorrectionRequest, BeltType } from '../types';
-import ConfirmationModal from './ConfirmationModal';
 import './ProgressHistoryEditModal.css';
 
 interface Props {
@@ -39,6 +38,20 @@ export default function ProgressHistoryEditModal({ isOpen, originalEntry, onClos
     }
   }, [originalEntry]);
 
+  const getErrorMessage = (error: unknown): string | undefined => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'object' && error !== null) {
+      const maybeResponse = (error as { response?: { data?: { message?: string } } }).response;
+      if (maybeResponse?.data && typeof maybeResponse.data === 'object' && 'message' in maybeResponse.data) {
+        const message = (maybeResponse.data as { message?: string }).message;
+        return message;
+      }
+    }
+    return undefined;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.notes?.trim()) {
@@ -48,8 +61,9 @@ export default function ProgressHistoryEditModal({ isOpen, originalEntry, onClos
     try {
       await onSave(formData);
       onClose();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create correction');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err) || 'Failed to create correction';
+      alert(message);
       console.error(err);
     }
   };

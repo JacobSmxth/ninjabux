@@ -26,13 +26,13 @@ export default function AdminLogin({ onLogin }: Props) {
       setLoading(true);
       const admin = await adminApi.login({ username: username.trim(), password });
       onLogin(admin);
-    } catch (err: any) {
-      if (err.response?.status === 401) {
+    } catch (error) {
+      if (error instanceof Error && 'response' in error && (error as any).response?.status === 401) {
         setError('Invalid username or password');
       } else {
         setError('Failed to connect to server');
       }
-      console.error(err);
+      console.error(error);
     } finally {
       setLoading(false);
     }

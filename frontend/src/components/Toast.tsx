@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { FiCheckCircle, FiAlertCircle, FiInfo, FiX, FiAward, FiTrendingUp, FiZap, FiBell } from 'react-icons/fi';
+import { useEffect, type ReactElement } from 'react';
+import { FiCheckCircle, FiAlertCircle, FiInfo, FiX, FiAward, FiTrendingUp, FiBell } from 'react-icons/fi';
 import confetti from 'canvas-confetti';
 import './Toast.css';
 
@@ -32,11 +32,12 @@ export default function Toast({ message, type, onClose, duration = 4000, title }
         return Math.random() * (max - min) + min;
       }
 
-      const interval: any = setInterval(function() {
+      const interval = window.setInterval(() => {
         const timeLeft = animationEnd - Date.now();
 
         if (timeLeft <= 0) {
-          return clearInterval(interval);
+          clearInterval(interval);
+          return;
         }
 
         const particleCount = 50 * (timeLeft / duration);
@@ -61,7 +62,7 @@ export default function Toast({ message, type, onClose, duration = 4000, title }
     }
   }, [type]);
 
-  const icons = {
+  const icons: Record<ToastType, ReactElement> = {
     success: <FiCheckCircle size={22} />,
     error: <FiAlertCircle size={22} />,
     info: <FiInfo size={22} />,

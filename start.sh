@@ -33,7 +33,7 @@ fi
 
 
 echo "Starting backend..."
-./gradlew bootRun &
+./gradlew bootRun > back.log &
 BACKEND_PID=$!
 echo "Backend PID: $BACKEND_PID"
 sleep 5

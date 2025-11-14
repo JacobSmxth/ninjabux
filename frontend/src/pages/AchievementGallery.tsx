@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { achievementApi } from '../services/api';
 import type { AchievementProgress, AchievementCategory } from '../types';
 import { FiAward, FiLock, FiFilter, FiDollarSign } from 'react-icons/fi';
@@ -28,15 +28,18 @@ export default function AchievementGallery({ ninjaId }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'ALL'>('ALL');
   const [showUnlockedOnly, setShowUnlockedOnly] = useState(false);
 
-  useEffect(() => {
-    loadAchievements();
-  }, [ninjaId]);
+  const extractErrorMessage = (error: unknown): string | undefined => {
+    if (error instanceof Error && !('response' in error)) {
+      return error.message;
+    }
+    if (typeof error === 'object' && error !== null && 'response' in error) {
+      const response = (error as { response?: { data?: { message?: string } } }).response;
+      return response?.data?.message;
+    }
+    return undefined;
+  };
 
-  useEffect(() => {
-    filterAchievements();
-  }, [achievements, selectedCategory, showUnlockedOnly]);
-
-  const loadAchievements = async () => {
+  const loadAchievements = useCallback(async () => {
     try {
       setLoading(true);
       // admin can see hidden achievements, regular users can't
@@ -50,15 +53,20 @@ export default function AchievementGallery({ ninjaId }: Props) {
       
       setAchievements(filtered);
       setError('');
-    } catch (err) {
-      setError('Failed to load achievements');
-      console.error(err);
+    } catch (error) {
+      const message = extractErrorMessage(error) || 'Failed to load achievements';
+      setError(message);
+      console.error(error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [ninjaId]);
 
-  const filterAchievements = () => {
+  useEffect(() => {
+    loadAchievements();
+  }, [loadAchievements]);
+
+  const filterAchievements = useCallback(() => {
     let filtered = [...achievements];
 
     // filter by category if one is selected
@@ -79,7 +87,11 @@ export default function AchievementGallery({ ninjaId }: Props) {
     });
 
     setFilteredAchievements(filtered);
-  };
+  }, [achievements, selectedCategory, showUnlockedOnly]);
+
+  useEffect(() => {
+    filterAchievements();
+  }, [filterAchievements]);
 
   const getStats = () => {
     const total = achievements.length;
@@ -209,9 +221,9 @@ export default function AchievementGallery({ ninjaId }: Props) {
                       await achievementApi.setLeaderboardBadge(ninjaId, progress.id);
                       await loadAchievements();
                       success('Badge selected for leaderboard!');
-                    } catch (err: any) {
-                      const errorMsg = err.response?.data?.message || err.message || 'Failed to set badge';
-                      showError(errorMsg || 'Failed to set badge');
+                    } catch (error) {
+                      const errorMsg = extractErrorMessage(error) || 'Failed to set badge';
+                      showError(errorMsg);
                     }
                   }}
                   style={{

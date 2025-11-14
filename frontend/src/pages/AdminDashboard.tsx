@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, bigQuestionApi, adminApi, achievementApi, analyticsApi, ledgerApi } from '../services/api';
-import type { Ninja, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest, AwardAchievementRequest, AchievementProgress } from '../types';
-import { FiEdit2, FiTrash2, FiPause, FiPlay, FiUsers, FiShoppingBag, FiHelpCircle, FiAward, FiSettings, FiSearch, FiPlus, FiDollarSign, FiShoppingCart, FiTarget, FiStar, FiTrendingUp, FiZap, FiClock, FiLock, FiCheck } from 'react-icons/fi';
+import type { Ninja, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest, AwardAchievementRequest, AnalyticsSnapshot, LedgerTransaction } from '../types';
+import { FiEdit2, FiTrash2, FiPause, FiPlay, FiUsers, FiShoppingBag, FiHelpCircle, FiAward, FiSettings, FiSearch, FiPlus, FiDollarSign, FiShoppingCart, FiTarget, FiTrendingUp, FiClock, FiLock } from 'react-icons/fi';
 import { useToastContext } from '../context/ToastContext';
 import Toast from '../components/Toast';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -21,8 +21,49 @@ interface NinjaWithPurchases extends Ninja {
   allPurchases?: Purchase[];
 }
 
+interface PendingSuggestion extends BigQuestion {
+  question?: BigQuestion;
+  ninjaName?: string;
+  suggestionsBanned?: boolean;
+}
+interface QuestionFormState {
+  questionDate: string;
+  questionText: string;
+  questionType: CreateBigQuestionRequest['questionType'];
+  correctAnswer: string;
+  correctChoiceIndex: number;
+  choices: [string, string, string, string];
+}
+
 type TabType = 'activity' | 'ninjas' | 'shop' | 'question' | 'achievements' | 'analytics' | 'settings';
 type OverviewSubTab = 'activity' | 'ledger' | 'announcement';
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && !('response' in error)) {
+    return error.message || fallback;
+  }
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as { response?: { data?: { message?: string } } }).response;
+    if (response?.data?.message) {
+      return response.data.message;
+    }
+  }
+  return fallback;
+};
+
+const getErrorStatus = (error: unknown): number | undefined => {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    return (error as { response?: { status?: number } }).response?.status;
+  }
+  return undefined;
+};
+
+const normalizeChoices = (choices?: string[]): QuestionFormState['choices'] => ([
+  choices?.[0] ?? '',
+  choices?.[1] ?? '',
+  choices?.[2] ?? '',
+  choices?.[3] ?? '',
+]);
 
 // suggestion review component for pending questions
 function SuggestionReviewList({
@@ -30,7 +71,7 @@ function SuggestionReviewList({
   onReject,
   onBan
 }: {
-  suggestions: any[]; // Can be BigQuestion or BigQuestionWithNinjaName
+  suggestions: PendingSuggestion[];
   onReject: (id: number, reason: string) => void;
   onBan: (ninjaId: number, banned: boolean) => void;
 }) {
@@ -70,13 +111,14 @@ function SuggestionReviewList({
       </h3>
       <div className="questions-list">
         {suggestions.map((suggestion) => {
-          const rejectState = rejectStates.get(suggestion.id || suggestion.question?.id);
+          const question = suggestion.question || suggestion;
+          const questionId = question.id || suggestion.id;
+          const rejectState = rejectStates.get(questionId);
           const showRejectInput = rejectState?.showInput || false;
           const rejectReason = rejectState?.reason || '';
 
-          const question = suggestion.question || suggestion;
-          const questionId = question.id || suggestion.id;
           const ninjaName = suggestion.ninjaName || (question.suggestedByNinjaId ? `(ID: ${question.suggestedByNinjaId})` : '');
+          const suggestionsBanned = suggestion.suggestionsBanned ?? false;
 
           return (
             <div key={questionId} className="question-card" style={{ borderLeftColor: '#3B82F6', background: 'white' }}>
@@ -87,7 +129,7 @@ function SuggestionReviewList({
                     <span className="type-badge pending" style={{ background: '#3B82F6', color: 'white' }}>
                       PENDING
                     </span>
-                    {(suggestion as any).suggestionsBanned && (
+                    {suggestionsBanned && (
                       <span className="type-badge" style={{ background: '#dc2626', color: 'white', fontSize: '0.75rem' }}>
                         BANNED
                       </span>
@@ -101,13 +143,12 @@ function SuggestionReviewList({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            const isBanned = (suggestion as any).suggestionsBanned || false;
-                            onBan(question.suggestedByNinjaId!, !isBanned);
+                            onBan(question.suggestedByNinjaId!, !suggestionsBanned);
                           }}
-                          className={`btn btn-sm ${(suggestion as any).suggestionsBanned ? 'btn-success' : 'btn-warning'}`}
-                          title={(suggestion as any).suggestionsBanned ? 'Unban ninja from suggesting questions' : 'Ban ninja from suggesting questions'}
+                          className={`btn btn-sm ${suggestionsBanned ? 'btn-success' : 'btn-warning'}`}
+                          title={suggestionsBanned ? 'Unban ninja from suggesting questions' : 'Ban ninja from suggesting questions'}
                         >
-                          {(suggestion as any).suggestionsBanned ? 'Unban' : 'Ban'}
+                          {suggestionsBanned ? 'Unban' : 'Ban'}
                         </button>
                       )}
                       <button
@@ -190,7 +231,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [questions, setQuestions] = useState<BigQuestion[]>([]);
   const [pastQuestions, setPastQuestions] = useState<BigQuestion[]>([]);
   const [showPast, setShowPast] = useState(false);
-  const [pendingSuggestions, setPendingSuggestions] = useState<BigQuestion[]>([]);
+  const [pendingSuggestions, setPendingSuggestions] = useState<PendingSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
@@ -233,17 +274,16 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [editingQuestion, setEditingQuestion] = useState<BigQuestion | null>(null);
   const [isCreatingQuestion, setIsCreatingQuestion] = useState(false);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<number | null>(null);
-  const [questionFormData, setQuestionFormData] = useState({
+  const createEmptyQuestionForm = (): QuestionFormState => ({
     questionDate: new Date().toISOString().split('T')[0],
     questionText: '',
-    questionType: 'MULTIPLE_CHOICE' as 'MULTIPLE_CHOICE',
+    questionType: 'MULTIPLE_CHOICE',
     correctAnswer: '',
     correctChoiceIndex: 0,
-    choices: ['', '', '', ''],
+    choices: normalizeChoices(),
   });
 
-  const [buxNinjaId, setBuxNinjaId] = useState<number | null>(null);
-  const [buxAmount, setBuxAmount] = useState(0);
+  const [questionFormData, setQuestionFormData] = useState<QuestionFormState>(createEmptyQuestionForm());
 
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [adminFormData, setAdminFormData] = useState({
@@ -286,9 +326,8 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [assigningAchievement, setAssigningAchievement] = useState(false);
   const [selectedAchievementId, setSelectedAchievementId] = useState<number | null>(null);
   const [selectedNinjaForAchievement, setSelectedNinjaForAchievement] = useState<number | null>(null);
-  const [setNinjaAchievements] = useState<Map<number, AchievementProgress[]>>(new Map());
 
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsSnapshot | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [rebuildingLeaderboard, setRebuildingLeaderboard] = useState(false);
 
@@ -297,7 +336,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
 
   const [overviewSubTab, setOverviewSubTab] = useState<OverviewSubTab>('activity');
-  const [ledgerTransactions, setLedgerTransactions] = useState<any[]>([]);
+  const [ledgerTransactions, setLedgerTransactions] = useState<LedgerTransaction[]>([]);
   const [ledgerLoading, setLedgerLoading] = useState(false);
 
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -315,12 +354,125 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     onConfirm: () => {},
   });
 
-  useEffect(() => {
-    loadData();
-    loadAuditLogs();
-  }, [activeTab]);
+  const loadNinjas = useCallback(async () => {
+    try {
+      const data = await ninjaApi.getAllPaginated(
+        ninjaPage,
+        ninjaPageSize,
+        ninjaSort,
+        ninjaSortDirection,
+        searchQuery || undefined,
+        ninjaBeltFilter || undefined,
+        ninjaLockedFilter
+      );
+      const ninjasWithPurchases = await Promise.all(
+        data.content.map(async (ninja) => {
+          try {
+            const unredeemed = await shopApi.getUnredeemedPurchases(ninja.id);
+            const all = await shopApi.getNinjaPurchases(ninja.id);
+            return { ...ninja, unredeemedPurchases: unredeemed, allPurchases: all };
+          } catch {
+            return { ...ninja, unredeemedPurchases: [], allPurchases: [] };
+          }
+        })
+      );
+      setNinjas(ninjasWithPurchases);
+      setNinjaTotalPages(data.totalPages);
+      setNinjaTotalElements(data.totalElements);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to load ninjas'));
+      console.error(error);
+    }
+  }, [ninjaPage, ninjaPageSize, ninjaSort, ninjaSortDirection, searchQuery, ninjaBeltFilter, ninjaLockedFilter, showError]);
 
-  const loadData = async () => {
+  const loadShopItems = useCallback(async () => {
+    const items = await shopApi.getAllItems();
+    setShopItems(items);
+  }, []);
+
+  const loadQuestions = useCallback(async () => {
+    const questionsData = await bigQuestionApi.getAllQuestions();
+    setQuestions(questionsData);
+  }, []);
+
+  const loadPastQuestions = useCallback(async () => {
+    try {
+      const pastData = await bigQuestionApi.getPastQuestions();
+      setPastQuestions(pastData);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to load past questions'));
+      console.error(error);
+    }
+  }, [showError]);
+
+  const loadPendingSuggestions = useCallback(async () => {
+    try {
+      const suggestions = await bigQuestionApi.getPendingSuggestions();
+      setPendingSuggestions(suggestions as PendingSuggestion[]);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to load pending suggestions'));
+      console.error(error);
+    }
+  }, [showError]);
+
+  const loadAchievements = useCallback(async () => {
+    const allAchievements = await achievementApi.getAll();
+    setAchievements(allAchievements);
+  }, []);
+
+  const loadAuditLogs = useCallback(async () => {
+    try {
+      const logs = await adminApi.getAuditLogs(30);
+      setAuditLogs(logs);
+    } catch (error) {
+      console.error('Failed to load audit logs:', error);
+    }
+  }, []);
+
+  const loadLedgerTransactions = useCallback(async () => {
+    try {
+      setLedgerLoading(true);
+      const transactions = await ledgerApi.getAllLedgerTransactions(100);
+      setLedgerTransactions(transactions);
+    } catch (error) {
+      console.error('Failed to load ledger transactions:', error);
+      showError('Failed to load ledger transactions');
+    } finally {
+      setLedgerLoading(false);
+    }
+  }, [showError]);
+
+  const loadAnalytics = useCallback(async () => {
+    try {
+      setAnalyticsLoading(true);
+      const data = await analyticsApi.getAnalytics();
+      setAnalytics(data);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to load analytics'));
+      console.error(error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [showError]);
+
+  const loadAllAdmins = useCallback(async () => {
+    if (!admin || !adminListPassword) return;
+    try {
+      const admins = await adminApi.getAllAdmins(admin.username, adminListPassword);
+      setAllAdmins(admins);
+    } catch (error) {
+      if (getErrorStatus(error) === 401) {
+        showError('Invalid password');
+        setAdminListPassword('');
+        setShowAdminList(false);
+      } else {
+        showError(getErrorMessage(error, 'Failed to load admin list'));
+      }
+      console.error(error);
+    }
+  }, [admin, adminListPassword, showError]);
+
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       if (activeTab === 'activity' || activeTab === 'ninjas') {
@@ -350,76 +502,19 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, admin, loadAchievements, loadAllAdmins, loadAnalytics, loadNinjas, loadPendingSuggestions, loadQuestions, loadShopItems, showAdminList, showError]);
 
-  const loadNinjas = async () => {
-    try {
-      const data = await ninjaApi.getAllPaginated(
-        ninjaPage,
-        ninjaPageSize,
-        ninjaSort,
-        ninjaSortDirection,
-        searchQuery || undefined,
-        ninjaBeltFilter || undefined,
-        ninjaLockedFilter
-      );
-      const ninjasWithPurchases = await Promise.all(
-        data.content.map(async (ninja) => {
-          try {
-            const unredeemed = await shopApi.getUnredeemedPurchases(ninja.id);
-            const all = await shopApi.getNinjaPurchases(ninja.id);
-            return { ...ninja, unredeemedPurchases: unredeemed, allPurchases: all };
-          } catch (err) {
-            return { ...ninja, unredeemedPurchases: [], allPurchases: [] };
-          }
-        })
-      );
-      setNinjas(ninjasWithPurchases);
-      setNinjaTotalPages(data.totalPages);
-      setNinjaTotalElements(data.totalElements);
-    } catch (err) {
-      showError('Failed to load ninjas');
-      console.error(err);
-    }
-  };
+  useEffect(() => {
+    loadData();
+    loadAuditLogs();
+  }, [loadData, loadAuditLogs]);
 
   // reload when filters change, otherwise stale data confuses admins
   useEffect(() => {
     if (activeTab === 'activity' || activeTab === 'ninjas') {
       loadNinjas();
     }
-  }, [ninjaPage, ninjaPageSize, ninjaSort, ninjaSortDirection, searchQuery, ninjaBeltFilter, ninjaLockedFilter]);
-
-  const loadShopItems = async () => {
-    const items = await shopApi.getAllItems();
-    setShopItems(items);
-  };
-
-  const loadQuestions = async () => {
-    const questionsData = await bigQuestionApi.getAllQuestions();
-    setQuestions(questionsData);
-  };
-
-  const loadPastQuestions = async () => {
-    try {
-      const pastData = await bigQuestionApi.getPastQuestions();
-      setPastQuestions(pastData);
-    } catch (err) {
-      showError('Failed to load past questions');
-      console.error(err);
-    }
-  };
-
-  const loadPendingSuggestions = async () => {
-    try {
-      const suggestions = await bigQuestionApi.getPendingSuggestions();
-      setPendingSuggestions(suggestions);
-    } catch (err) {
-      showError('Failed to load pending suggestions');
-      console.error(err);
-    }
-  };
-
+  }, [activeTab, loadNinjas]);
   const handleUseSuggestion = (suggestion: BigQuestion) => {
     // Auto-fill form with suggestion data
     const today = new Date().toISOString().split('T')[0];
@@ -463,9 +558,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       });
       await loadPendingSuggestions();
       success('Question rejected and ninja notified');
-    } catch (err: any) {
-      showError(err.response?.data?.message || 'Failed to reject question');
-      console.error(err);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to reject question'));
+      console.error(error);
     }
   };
 
@@ -489,46 +584,18 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
           if (selectedNinja && selectedNinja.id === ninjaId) {
             setSelectedNinja(prev => prev ? { ...prev, suggestionsBanned: updatedNinja.suggestionsBanned } : null);
           }
-        } catch (err: any) {
-          showError(err.response?.data?.message || `Failed to ${banned ? 'ban' : 'unban'} ninja`);
-          console.error(err);
+        } catch (error) {
+          showError(getErrorMessage(error, `Failed to ${banned ? 'ban' : 'unban'} ninja`));
+          console.error(error);
         }
       },
     });
   };
-
-  const loadAchievements = async () => {
-    const allAchievements = await achievementApi.getAll();
-    setAchievements(allAchievements);
-  };
-
-  const loadAuditLogs = async () => {
-    try {
-      const logs = await adminApi.getAuditLogs(30);
-      setAuditLogs(logs);
-    } catch (err) {
-      console.error('Failed to load audit logs:', err);
-    }
-  };
-
-  const loadLedgerTransactions = async () => {
-    try {
-      setLedgerLoading(true);
-      const transactions = await ledgerApi.getAllLedgerTransactions(100);
-      setLedgerTransactions(transactions);
-    } catch (err) {
-      console.error('Failed to load ledger transactions:', err);
-      showError('Failed to load ledger transactions');
-    } finally {
-      setLedgerLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (activeTab === 'activity' && overviewSubTab === 'ledger') {
       loadLedgerTransactions();
     }
-  }, [activeTab, overviewSubTab]);
+  }, [activeTab, overviewSubTab, loadLedgerTransactions]);
 
   const handleCreateNinja = () => {
     setIsCreatingNinja(true);
@@ -599,10 +666,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       }
       closeNinjaForm();
       await loadNinjas();
-    } catch (err: any) {
-      const errorMessage = err.message || err.response?.data?.message || 'Failed to save ninja';
-      showError(errorMessage);
-      console.error(err);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to save ninja'));
+      console.error(error);
     } finally {
       setNinjaFormSubmitting(false);
     }
@@ -623,43 +689,12 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
           await ninjaApi.delete(id);
           success(`${name} deleted successfully`);
           loadNinjas();
-        } catch (err: any) {
-          const errorMessage = err.message || err.response?.data?.message || 'Failed to delete ninja';
-          showError(errorMessage);
-          console.error('Delete ninja error:', err);
-          console.error('Error response:', err.response);
-          console.error('Error data:', err.response?.data);
+        } catch (error) {
+          showError(getErrorMessage(error, 'Failed to delete ninja'));
+          console.error('Delete ninja error:', error);
         }
       },
     });
-  };
-
-  const handleAwardBux = async () => {
-    if (!buxNinjaId || buxAmount <= 0) return;
-    try {
-      await ninjaApi.awardBux(buxNinjaId, buxAmount);
-      success(`${buxAmount} Bux awarded successfully`);
-      setBuxNinjaId(null);
-      setBuxAmount(0);
-      loadNinjas();
-    } catch (err) {
-      showError('Failed to award Bux');
-      console.error(err);
-    }
-  };
-
-  const handleDeductBux = async () => {
-    if (!buxNinjaId || buxAmount <= 0) return;
-    try {
-      await ninjaApi.deductBux(buxNinjaId, buxAmount);
-      success(`${buxAmount} Bux deducted successfully`);
-      setBuxNinjaId(null);
-      setBuxAmount(0);
-      loadNinjas();
-    } catch (err) {
-      showError('Failed to deduct Bux');
-      console.error(err);
-    }
   };
 
   // shop item management functions
@@ -750,12 +785,8 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     setSelectedSuggestionId(null);
     const today = new Date().toISOString().split('T')[0];
     setQuestionFormData({
+      ...createEmptyQuestionForm(),
       questionDate: getMondayOfWeek(today),
-      questionText: '',
-      questionType: 'MULTIPLE_CHOICE',
-      correctAnswer: '',
-      correctChoiceIndex: 0,
-      choices: ['', '', '', ''],
     });
   };
 
@@ -765,10 +796,10 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     setQuestionFormData({
       questionDate: getMondayOfWeek(question.questionDate),
       questionText: question.questionText,
-      questionType: 'MULTIPLE_CHOICE' as 'MULTIPLE_CHOICE',
+      questionType: question.questionType ?? 'MULTIPLE_CHOICE',
       correctAnswer: question.correctAnswer || '',
       correctChoiceIndex: question.correctChoiceIndex ?? 0,
-      choices: question.choices || ['', '', '', ''],
+      choices: normalizeChoices(question.choices),
     });
   };
 
@@ -931,9 +962,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       setEditingAchievement(null);
       success('Achievement saved successfully!');
       loadAchievements();
-    } catch (err: any) {
-      showError(err.message || 'Failed to save achievement');
-      console.error(err);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to save achievement'));
+      console.error(error);
     }
   };
 
@@ -951,9 +982,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
           await achievementApi.delete(id);
           success('Achievement deleted successfully');
           loadAchievements();
-        } catch (err) {
-          showError('Failed to delete achievement');
-          console.error(err);
+        } catch (error) {
+          showError(getErrorMessage(error, 'Failed to delete achievement'));
+          console.error(error);
         }
       },
     });
@@ -964,9 +995,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       await achievementApi.toggleActive(id);
       success('Achievement status updated');
       loadAchievements();
-    } catch (err) {
-      showError('Failed to toggle achievement status');
-      console.error(err);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to toggle achievement status'));
+      console.error(error);
     }
   };
 
@@ -987,51 +1018,14 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       setAssigningAchievement(false);
       setSelectedAchievementId(null);
       setSelectedNinjaForAchievement(null);
-      // Reload ninja achievements
-      await loadNinjaAchievements(selectedNinjaForAchievement);
-    } catch (err: any) {
-      if (err.response?.status === 409) {
+    } catch (error) {
+      if (getErrorStatus(error) === 409) {
         showError('Ninja already has this achievement');
       } else {
-        showError(err.message || 'Failed to award achievement');
+        showError(getErrorMessage(error, 'Failed to award achievement'));
       }
-      console.error(err);
+      console.error(error);
     }
-  };
-
-  const handleRevokeAchievement = async (ninjaId: number, achievementId: number) => {
-    setConfirmationModal({
-      isOpen: true,
-      title: 'Revoke Achievement',
-      message: 'Are you sure you want to revoke this achievement?',
-      confirmText: 'Revoke',
-      cancelText: 'Cancel',
-      variant: 'warning',
-      onConfirm: async () => {
-        setConfirmationModal({ ...confirmationModal, isOpen: false });
-        try {
-          await achievementApi.revokeAchievement(ninjaId, achievementId);
-          success('Achievement revoked successfully');
-          await loadNinjaAchievements(ninjaId);
-        } catch (err) {
-          showError('Failed to revoke achievement');
-          console.error(err);
-        }
-      },
-    });
-  };
-
-  const loadNinjaAchievements = async (ninjaId: number) => {
-    try {
-      const progress = await achievementApi.getNinjaAchievements(ninjaId, true);
-      setNinjaAchievements(prev => new Map(prev).set(ninjaId, progress));
-    } catch (err) {
-      console.error('Failed to load ninja achievements:', err);
-    }
-  };
-
-  const handleViewNinjaAchievements = async (ninjaId: number) => {
-    await loadNinjaAchievements(ninjaId);
   };
 
   // admin management functions
@@ -1072,10 +1066,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
         currentPassword: '',
       });
       success('Admin account created successfully!');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to create admin account';
-      showError(errorMessage);
-      console.error(err);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to create admin account'));
+      console.error(error);
     }
   };
 
@@ -1115,23 +1108,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
         confirmPassword: '',
       });
       success('Password changed successfully!');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to change password';
-      showError(errorMessage);
-      console.error(err);
-    }
-  };
-
-  const loadAnalytics = async () => {
-    try {
-      setAnalyticsLoading(true);
-      const data = await analyticsApi.getAnalytics();
-      setAnalytics(data);
-    } catch (err) {
-      showError('Failed to load analytics');
-      console.error(err);
-    } finally {
-      setAnalyticsLoading(false);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to change password'));
+      console.error(error);
     }
   };
 
@@ -1140,28 +1119,11 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       setRebuildingLeaderboard(true);
       await ninjaApi.rebuildLeaderboard();
       success('Leaderboard rebuilt successfully');
-    } catch (err: any) {
-      showError(err.response?.data?.message || 'Failed to rebuild leaderboard');
-      console.error(err);
+    } catch (error) {
+      showError(getErrorMessage(error, 'Failed to rebuild leaderboard'));
+      console.error(error);
     } finally {
       setRebuildingLeaderboard(false);
-    }
-  };
-
-  const loadAllAdmins = async () => {
-    if (!admin || !adminListPassword) return;
-    try {
-      const admins = await adminApi.getAllAdmins(admin.username, adminListPassword);
-      setAllAdmins(admins);
-    } catch (err: any) {
-      if (err.response?.status === 401) {
-        showError('Invalid password');
-        setAdminListPassword('');
-        setShowAdminList(false);
-      } else {
-        showError('Failed to load admin list');
-      }
-      console.error(err);
     }
   };
 
@@ -1174,15 +1136,15 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       if (!admin) return;
       const admins = await adminApi.getAllAdmins(admin.username, password);
       setAllAdmins(admins);
-    } catch (err: any) {
-      if (err.response?.status === 401) {
+    } catch (error) {
+      if (getErrorStatus(error) === 401) {
         showError('Invalid password');
         setAdminListPassword('');
         setShowAdminList(false);
       } else {
-        showError('Failed to load admin list');
+        showError(getErrorMessage(error, 'Failed to load admin list'));
       }
-      console.error(err);
+      console.error(error);
     }
   };
 
@@ -1212,15 +1174,16 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
           await adminApi.deleteAdmin(adminToDelete.id, admin.username, password);
           await loadAllAdmins();
           success('Admin account deleted successfully');
-        } catch (err: any) {
-          if (err.response?.status === 401) {
+        } catch (error) {
+          const status = getErrorStatus(error);
+          if (status === 401) {
             showError('Invalid password');
-          } else if (err.response?.status === 400) {
+          } else if (status === 400) {
             showError('Cannot delete your own account');
           } else {
-            showError('Failed to delete admin account');
+            showError(getErrorMessage(error, 'Failed to delete admin account'));
           }
-          console.error(err);
+          console.error(error);
         } finally {
           setDeletingAdminId(null);
         }
@@ -1235,12 +1198,16 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     `${n.firstName} ${n.lastName} ${n.username}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const stalledNinjas = analytics?.stallDetection?.stalledNinjas ?? [];
+  const mostPopularItems = analytics?.itemPopularity?.mostPopularItems ?? [];
+  const leastPopularItems = analytics?.itemPopularity?.leastPopularItems ?? [];
+
   // reset to first page when filters change, otherwise you're on page 5 of 0 results
   useEffect(() => {
     if (ninjaPage > 0) {
       setNinjaPage(0);
     }
-  }, [searchQuery, ninjaBeltFilter, ninjaLockedFilter]);
+  }, [searchQuery, ninjaBeltFilter, ninjaLockedFilter, ninjaPage]);
 
   if (loading && ninjas.length === 0 && shopItems.length === 0 && questions.length === 0) {
     return (
@@ -1471,7 +1438,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                           </td>
                         </tr>
                       ) : (
-                        ledgerTransactions.map((txn: any) => (
+                        ledgerTransactions.map((txn) => (
                           <tr key={txn.id}>
                             <td>{new Date(txn.createdAt).toLocaleString()}</td>
                             <td>{txn.ninjaFirstName} {txn.ninjaLastName}</td>
@@ -1516,8 +1483,8 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                   setAnnouncementTitle('');
                   setAnnouncementMessage('');
                   await loadAuditLogs();
-                } catch (err: any) {
-                  showError(err.response?.data?.message || err.message || 'Failed to send announcement');
+                } catch (error) {
+                  showError(getErrorMessage(error, 'Failed to send announcement'));
                 } finally {
                   setSendingAnnouncement(false);
                 }
@@ -1920,9 +1887,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                   >
                     <h4 style={{ marginBottom: '1rem', color: '#3B82F6' }}>Suggestions ({pendingSuggestions.length})</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {pendingSuggestions.map((suggestion: any) => {
-                        const question: BigQuestion = (suggestion as any).question || suggestion;
-                        const ninjaName = (suggestion as any).ninjaName || (question.suggestedByNinjaId ? `(ID: ${question.suggestedByNinjaId})` : '');
+                      {pendingSuggestions.map((suggestion) => {
+                        const question = suggestion.question || suggestion;
+                        const ninjaName = suggestion.ninjaName || (question.suggestedByNinjaId ? `(ID: ${question.suggestedByNinjaId})` : '');
                         const isSelected = selectedSuggestionId === question.id;
 
                         return (
@@ -2554,11 +2521,11 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
               {analytics.stallDetection && (
                 <div className="analytics-section">
                   <h3><FiClock /> Stall Detection</h3>
-                  {analytics.stallDetection.stalledNinjas && analytics.stallDetection.stalledNinjas.length > 0 ? (
+                  {stalledNinjas.length > 0 ? (
                     <div className="stall-alerts">
                       <h4>Stalled Ninjas (No progress in 7+ days)</h4>
                       <div className="stall-list">
-                        {analytics.stallDetection.stalledNinjas.slice(0, 10).map((stall: any) => (
+                        {stalledNinjas.slice(0, 10).map((stall) => (
                           <div key={stall.ninjaId} className="stall-item">
                             <span className="stall-name">{stall.ninjaName}</span>
                             <span className="stall-days">{stall.daysStalled} days</span>
@@ -2724,11 +2691,11 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
               {analytics.itemPopularity && (
                 <div className="analytics-section">
                   <h3><FiShoppingBag /> Item Popularity</h3>
-                  {analytics.itemPopularity.mostPopularItems && analytics.itemPopularity.mostPopularItems.length > 0 && (
+                  {mostPopularItems.length > 0 && (
                     <div className="popularity-section">
                       <h4>Most Popular Items</h4>
                       <div className="popular-items-list">
-                        {analytics.itemPopularity.mostPopularItems.slice(0, 10).map((item: any) => (
+                        {mostPopularItems.slice(0, 10).map((item) => (
                           <div key={item.itemId} className="popular-item-card">
                             <div className="item-name">{item.itemName}</div>
                             <div className="item-stats">
@@ -2740,11 +2707,11 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                       </div>
                     </div>
                   )}
-                  {analytics.itemPopularity.leastPopularItems && analytics.itemPopularity.leastPopularItems.length > 0 && (
+                  {leastPopularItems.length > 0 && (
                     <div className="popularity-section">
                       <h4>Least Popular Items</h4>
                       <div className="popular-items-list">
-                        {analytics.itemPopularity.leastPopularItems.slice(0, 10).map((item: any) => (
+                        {leastPopularItems.slice(0, 10).map((item) => (
                           <div key={item.itemId} className="popular-item-card">
                             <div className="item-name">{item.itemName}</div>
                             <div className="item-stats">

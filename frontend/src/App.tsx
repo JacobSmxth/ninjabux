@@ -81,7 +81,7 @@ function AppContent() {
     } else {
       localStorage.removeItem('selectedNinjaId');
     }
-  }, [selectedNinjaId]);
+  }, [selectedNinjaId, location.pathname, navigate]);
 
   useEffect(() => {
     if (admin) {
@@ -92,7 +92,7 @@ function AppContent() {
     } else {
       localStorage.removeItem('admin');
     }
-  }, [admin]);
+  }, [admin, location.pathname, navigate]);
 
   const handleLogout = () => {
     setSelectedNinjaId(null);

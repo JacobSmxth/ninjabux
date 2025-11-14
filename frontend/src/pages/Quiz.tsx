@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { FiHelpCircle } from 'react-icons/fi';
 import { ninjaApi, bigQuestionApi } from '../services/api';
 import type { Ninja, BigQuestionResponse } from '../types';
-import { FiHelpCircle } from 'react-icons/fi';
 import { useToastContext } from '../context/ToastContext';
+import { getApiErrorMessage } from '../utils/errorHandling';
 import './Quiz.css';
 
-// Week Countdown Component
 function WeekCountdown({ startDate, endDate }: { startDate: string; endDate: string }) {
   const [timeLeft, setTimeLeft] = useState<string>('');
 
@@ -34,8 +34,7 @@ function WeekCountdown({ startDate, endDate }: { startDate: string; endDate: str
     };
 
     updateCountdown();
-    const interval = setInterval(updateCountdown, 60000); // Update every minute
-
+    const interval = setInterval(updateCountdown, 60000);
     return () => clearInterval(interval);
   }, [endDate]);
 
@@ -45,6 +44,119 @@ function WeekCountdown({ startDate, endDate }: { startDate: string; endDate: str
         {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}
       </span>
       <span className="countdown">{timeLeft}</span>
+    </div>
+  );
+}
+
+function QuizStats({ ninja }: { ninja: Ninja }) {
+  const accuracy =
+    ninja.totalQuestionsAnswered > 0
+      ? Math.round((ninja.totalQuestionsCorrect / ninja.totalQuestionsAnswered) * 100)
+      : null;
+
+  return (
+    <div className="quiz-stats">
+      <h3>Your Quiz Stats</h3>
+      <div className="quiz-stats__grid">
+        <div className="quiz-stats__cell">
+          <div className="quiz-stats__value">{ninja.totalQuestionsAnswered}</div>
+          <div className="quiz-stats__label">Total Answered</div>
+        </div>
+        <div className="quiz-stats__cell">
+          <div className="quiz-stats__value">{ninja.totalQuestionsCorrect}</div>
+          <div className="quiz-stats__label">Correct</div>
+        </div>
+        {accuracy !== null && (
+          <div className="quiz-stats__cell">
+            <div className="quiz-stats__value">{accuracy}%</div>
+            <div className="quiz-stats__label">Accuracy</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ChoiceOptionProps {
+  index: number;
+  label: string;
+  isSelected: boolean;
+  onSelect: (value: string) => void;
+}
+
+function ChoiceOption({ index, label, isSelected, onSelect }: ChoiceOptionProps) {
+  return (
+    <button
+      type="button"
+      className={`choice-option ${isSelected ? 'selected' : ''}`}
+      onClick={() => onSelect(index.toString())}
+      aria-pressed={isSelected}
+    >
+      <span className="choice-number">{index + 1}</span>
+      <span className="choice-text">{label}</span>
+    </button>
+  );
+}
+
+interface SuggestQuestionPanelProps {
+  isBanned?: boolean;
+  expanded: boolean;
+  suggestionText: string;
+  onToggle: () => void;
+  onChange: (value: string) => void;
+  onSubmit: () => Promise<void> | void;
+  isSubmitting: boolean;
+}
+
+function SuggestQuestionPanel({
+  isBanned,
+  expanded,
+  suggestionText,
+  onToggle,
+  onChange,
+  onSubmit,
+  isSubmitting,
+}: SuggestQuestionPanelProps) {
+  if (isBanned) {
+    return (
+      <div className="suggestion-ban">
+        <p>You are banned from suggesting questions</p>
+      </div>
+    );
+  }
+
+  const handleSubmit = async () => {
+    if (!suggestionText.trim() || isSubmitting) return;
+    await onSubmit();
+  };
+
+  return (
+    <div className="suggest-question-section">
+      <button type="button" className="suggestion-toggle" onClick={onToggle}>
+        <FiHelpCircle />
+        {expanded ? 'Hide' : 'Suggest'} a Question
+      </button>
+      {expanded && (
+        <>
+          <textarea
+            className="suggestion-textarea"
+            value={suggestionText}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="Enter your question suggestion here..."
+            rows={4}
+          />
+          <div className="suggestion-actions">
+            <button
+              type="button"
+              className="suggestion-submit"
+              onClick={handleSubmit}
+              disabled={!suggestionText.trim() || isSubmitting}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Suggestion'}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -59,78 +171,100 @@ export default function Quiz({ ninjaId }: Props) {
   const [bigQuestion, setBigQuestion] = useState<BigQuestionResponse | null>(null);
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
-  const [suggestQuestion, setSuggestQuestion] = useState(false);
+  const [error, setError] = useState('');
   const [suggestionText, setSuggestionText] = useState('');
+  const [showSuggestionForm, setShowSuggestionForm] = useState(false);
+  const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const [submittingSuggestion, setSubmittingSuggestion] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [ninjaId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [ninjaData] = await Promise.all([
-        ninjaApi.getById(ninjaId),
-      ]);
+      const ninjaData = await ninjaApi.getById(ninjaId);
       setNinja(ninjaData);
       setError('');
 
       try {
         const questionData = await bigQuestionApi.getThisWeeksQuestion(ninjaId);
-        if (questionData) {
-          setBigQuestion(questionData);
-        } else {
-          setBigQuestion(null);
-        }
-      } catch (err: any) {
-        // dont worry I did this
-        console.error('Error loading question:', err);
+        setBigQuestion(questionData ?? null);
+      } catch (questionError) {
+        console.error('Error loading question:', questionError);
         setBigQuestion(null);
       }
     } catch (err) {
-      setError('Failed to load data');
-      console.error(err);
+      const message = getApiErrorMessage(err, 'Failed to load data');
+      setError(message);
+      setNinja(null);
+      setBigQuestion(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [ninjaId]);
 
-  const handleSubmitAnswer = async () => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (ninja?.suggestionsBanned) {
+      setShowSuggestionForm(false);
+      setSuggestionText('');
+    }
+  }, [ninja?.suggestionsBanned]);
+
+  useEffect(() => {
+    setAnswer('');
+  }, [bigQuestion?.id, bigQuestion?.questionType]);
+
+  const handleSubmitAnswer = useCallback(async () => {
     if (!bigQuestion || !answer.trim()) return;
 
+    setSubmittingAnswer(true);
     try {
       await bigQuestionApi.submitAnswer(bigQuestion.id, {
         ninjaId,
-        answer: answer.trim()
+        answer: answer.trim(),
       });
-      loadData();
+      await loadData();
       setAnswer('');
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit answer');
+      success('Answer submitted!', 'Nice work');
+    } catch (err) {
+      showError(getApiErrorMessage(err, 'Failed to submit answer'));
       console.error(err);
+    } finally {
+      setSubmittingAnswer(false);
     }
-  };
+  }, [answer, bigQuestion, loadData, ninjaId, showError, success]);
 
-  const getBeltTheme = (belt: string) => {
-    const themes: Record<string, { primary: string; secondary: string; textColor: string }> = {
-      white: { primary: '#e8e8e8', secondary: '#000000', textColor: '#5a6c7d' },
-      yellow: { primary: '#ffd700', secondary: '#000000', textColor: '#ffd700' },
-      orange: { primary: '#ff8c00', secondary: '#ffffff', textColor: '#ff8c00' },
-      green: { primary: '#32cd32', secondary: '#ffffff', textColor: '#32cd32' },
-      blue: { primary: '#4169e1', secondary: '#ffffff', textColor: '#4169e1' },
-      purple: { primary: '#9370db', secondary: '#ffffff', textColor: '#9370db' },
-      red: { primary: '#dc143c', secondary: '#ffffff', textColor: '#dc143c' },
-      brown: { primary: '#8b4513', secondary: '#ffffff', textColor: '#8b4513' },
-      black: { primary: '#1a1a1a', secondary: '#ffffff', textColor: '#1a1a1a' },
-    };
-    return themes[belt.toLowerCase()] || themes.black;
-  };
+  const handleSubmitSuggestion = useCallback(async () => {
+    if (!suggestionText.trim() || ninja?.suggestionsBanned) {
+      return;
+    }
 
-  const beltTheme = ninja ? getBeltTheme(ninja.currentBeltType) : { primary: '#E31E24', secondary: '#ffffff', textColor: '#E31E24' };
+    setSubmittingSuggestion(true);
+    try {
+      await bigQuestionApi.suggestQuestion({
+        ninjaId,
+        questionText: suggestionText.trim(),
+        questionType: 'SHORT_ANSWER',
+      });
+      setSuggestionText('');
+      setShowSuggestionForm(false);
+      success('Question suggestion submitted! Thank you!', 'Suggestion Submitted');
+    } catch (err) {
+      showError(getApiErrorMessage(err, 'Failed to submit suggestion'));
+      console.error(err);
+    } finally {
+      setSubmittingSuggestion(false);
+    }
+  }, [ninja?.suggestionsBanned, ninjaId, showError, suggestionText, success]);
 
   if (loading) {
-    return <div className="quiz-container"><h2>Loading...</h2></div>;
+    return (
+      <div className="quiz-container">
+        <h2>Loading...</h2>
+      </div>
+    );
   }
 
   if (error || !ninja) {
@@ -143,88 +277,49 @@ export default function Quiz({ ninjaId }: Props) {
 
   return (
     <div className="quiz-container">
-      <div className="quiz-header" style={{ borderBottomColor: beltTheme.primary }}>
+      <div className="quiz-header">
         <h1>Question of the Week</h1>
         {bigQuestion && bigQuestion.weekStartDate && bigQuestion.weekEndDate && (
           <WeekCountdown startDate={bigQuestion.weekStartDate} endDate={bigQuestion.weekEndDate} />
         )}
       </div>
 
-      {/* Stats */}
-      <div className="quiz-stats" style={{ marginBottom: '1.5rem', padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', border: `2px solid ${beltTheme.primary}` }}>
-        <h3 style={{ marginTop: 0, marginBottom: '1rem', color: '#000000', fontSize: '1.2rem', fontWeight: 700 }}>Your Quiz Stats</h3>
-        <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#000000' }}>
-              {ninja.totalQuestionsAnswered}
-            </div>
-            <div style={{ fontSize: '0.875rem', color: '#666', fontWeight: 600 }}>Total Answered</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#000000' }}>
-              {ninja.totalQuestionsCorrect}
-            </div>
-            <div style={{ fontSize: '0.875rem', color: '#666', fontWeight: 600 }}>Correct</div>
-          </div>
-          {ninja.totalQuestionsAnswered > 0 && (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#000000' }}>
-                {Math.round((ninja.totalQuestionsCorrect / ninja.totalQuestionsAnswered) * 100)}%
-              </div>
-              <div style={{ fontSize: '0.875rem', color: '#666', fontWeight: 600 }}>Accuracy</div>
-            </div>
-          )}
-        </div>
-      </div>
+      <QuizStats ninja={ninja} />
 
       {bigQuestion ? (
-        <div className="big-question-section" style={{ borderColor: beltTheme.primary }}>
+        <section className="big-question-section">
           <div className="big-question-card">
             <p className="question-text">{bigQuestion.questionText}</p>
-
             {!bigQuestion.hasAnswered ? (
               <>
                 {bigQuestion.questionType === 'MULTIPLE_CHOICE' && bigQuestion.choices ? (
                   <div className="choices-container">
                     {bigQuestion.choices.map((choice, idx) => (
-                      <div
-                        key={idx}
-                        className={`choice-option ${answer === idx.toString() ? 'selected' : ''}`}
-                        onClick={() => setAnswer(idx.toString())}
-                        style={answer === idx.toString() ? {
-                          borderColor: beltTheme.primary,
-                          background: `${beltTheme.primary}15`
-                        } : {}}
-                      >
-                        <div className="choice-number" style={answer === idx.toString() ? {
-                          background: beltTheme.primary,
-                          color: beltTheme.secondary
-                        } : {}}>
-                          {idx + 1}
-                        </div>
-                        <div className="choice-text">{choice}</div>
-                      </div>
+                      <ChoiceOption
+                        key={`${idx}-${choice ?? 'choice'}`}
+                        index={idx}
+                        label={choice ?? ''}
+                        isSelected={answer === idx.toString()}
+                        onSelect={(value) => setAnswer(value)}
+                      />
                     ))}
                   </div>
                 ) : (
                   <textarea
                     className="answer-input"
                     value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
+                    onChange={(event) => setAnswer(event.target.value)}
                     placeholder="Type your answer here..."
                     rows={3}
                   />
                 )}
                 <button
+                  type="button"
                   className="submit-answer-btn"
                   onClick={handleSubmitAnswer}
-                  disabled={!answer.trim()}
-                  style={{
-                    background: beltTheme.primary,
-                    color: beltTheme.secondary
-                  }}
+                  disabled={!answer.trim() || submittingAnswer}
                 >
-                  Submit Answer
+                  {submittingAnswer ? 'Submitting...' : 'Submit Answer'}
                 </button>
               </>
             ) : (
@@ -243,181 +338,33 @@ export default function Quiz({ ninjaId }: Props) {
               </div>
             )}
           </div>
-          
-          {/* Suggest Question */}
-          {!ninja?.suggestionsBanned ? (
-            <div className="suggest-question-section" style={{ marginTop: '1.5rem', padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', border: `2px solid ${beltTheme.primary}` }}>
-              <button
-                onClick={() => setSuggestQuestion(!suggestQuestion)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: beltTheme.primary,
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  marginBottom: suggestQuestion ? '1rem' : 0,
-                }}
-              >
-                <FiHelpCircle />
-                {suggestQuestion ? 'Hide' : 'Suggest'} a Question
-              </button>
-              {suggestQuestion && (
-                <div>
-                  <textarea
-                    value={suggestionText}
-                    onChange={(e) => setSuggestionText(e.target.value)}
-                    placeholder="Enter your question suggestion here..."
-                    rows={4}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      borderRadius: '8px',
-                      border: `2px solid ${beltTheme.primary}`,
-                      fontSize: '1rem',
-                      marginBottom: '0.75rem',
-                      resize: 'vertical',
-                    }}
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!suggestionText.trim()) return;
-                      if (ninja?.suggestionsBanned) {
-                        showError('You are banned from suggesting questions');
-                        return;
-                      }
-                      try {
-                        await bigQuestionApi.suggestQuestion({
-                          ninjaId,
-                          questionText: suggestionText,
-                          questionType: 'SHORT_ANSWER',
-                        });
-                        setSuggestionText('');
-                        setSuggestQuestion(false);
-                        success('Question suggestion submitted! Thank you!', 'Suggestion Submitted');
-                      } catch (err: any) {
-                        showError(err.response?.data?.message || 'Failed to submit suggestion');
-                        console.error(err);
-                      }
-                    }}
-                    disabled={ninja?.suggestionsBanned || !suggestionText.trim()}
-                    style={{
-                      background: beltTheme.primary,
-                      color: beltTheme.secondary,
-                      border: 'none',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      cursor: suggestionText.trim() ? 'pointer' : 'not-allowed',
-                      opacity: suggestionText.trim() ? 1 : 0.5,
-                    }}
-                  >
-                    Submit Suggestion
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{ marginTop: '1.5rem', padding: '1.5rem', background: '#fee2e2', borderRadius: '12px', border: '2px solid #dc2626', textAlign: 'center' }}>
-              <p style={{ color: '#dc2626', fontWeight: 600, margin: 0 }}>You are banned from suggesting questions</p>
-            </div>
-          )}
-        </div>
+
+          <SuggestQuestionPanel
+            isBanned={ninja.suggestionsBanned}
+            expanded={showSuggestionForm}
+            suggestionText={suggestionText}
+            onToggle={() => setShowSuggestionForm((prev) => !prev)}
+            onChange={setSuggestionText}
+            onSubmit={handleSubmitSuggestion}
+            isSubmitting={submittingSuggestion}
+          />
+        </section>
       ) : (
-        <div className="no-question" style={{ padding: '3rem', textAlign: 'center', background: '#f8f9fa', borderRadius: '12px', border: `2px solid ${beltTheme.primary}` }}>
-          <FiHelpCircle size={48} color={beltTheme.primary} style={{ marginBottom: '1rem' }} />
-          <h2 style={{ color: '#000000', marginBottom: '0.5rem' }}>No Question This Week</h2>
-          <p style={{ color: '#666', marginBottom: '1.5rem' }}>Check back next week for a new question!</p>
-          
-          {/* Suggest Question */}
-          {!ninja?.suggestionsBanned ? (
-            <div className="suggest-question-section" style={{ marginTop: '1.5rem', padding: '1.5rem', background: 'white', borderRadius: '12px', border: `2px solid ${beltTheme.primary}` }}>
-              <button
-                onClick={() => setSuggestQuestion(!suggestQuestion)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: beltTheme.primary,
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  marginBottom: suggestQuestion ? '1rem' : 0,
-                }}
-              >
-                <FiHelpCircle />
-                {suggestQuestion ? 'Hide' : 'Suggest'} a Question
-              </button>
-            {suggestQuestion && (
-              <div>
-                <textarea
-                  value={suggestionText}
-                  onChange={(e) => setSuggestionText(e.target.value)}
-                  placeholder="Enter your question suggestion here..."
-                  rows={4}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: `2px solid ${beltTheme.primary}`,
-                    fontSize: '1rem',
-                    marginBottom: '0.75rem',
-                    resize: 'vertical',
-                  }}
-                />
-                <button
-                  onClick={async () => {
-                    if (!suggestionText.trim()) return;
-                    if (ninja?.suggestionsBanned) {
-                      showError('You are banned from suggesting questions');
-                      return;
-                    }
-                    try {
-                      await bigQuestionApi.suggestQuestion({
-                        ninjaId,
-                        questionText: suggestionText,
-                        questionType: 'SHORT_ANSWER',
-                      });
-                      setSuggestionText('');
-                      setSuggestQuestion(false);
-                      success('Question suggestion submitted! Thank you!', 'Suggestion Submitted');
-                    } catch (err: any) {
-                      showError(err.response?.data?.message || 'Failed to submit suggestion');
-                      console.error(err);
-                    }
-                  }}
-                  disabled={ninja?.suggestionsBanned || !suggestionText.trim()}
-                  style={{
-                    background: beltTheme.primary,
-                    color: beltTheme.secondary,
-                    border: 'none',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    cursor: suggestionText.trim() ? 'pointer' : 'not-allowed',
-                    opacity: suggestionText.trim() ? 1 : 0.5,
-                  }}
-                >
-                  Submit Suggestion
-                </button>
-              </div>
-            )}
-            </div>
-          ) : (
-            <div style={{ marginTop: '1.5rem', padding: '1.5rem', background: '#fee2e2', borderRadius: '12px', border: '2px solid #dc2626', textAlign: 'center' }}>
-              <p style={{ color: '#dc2626', fontWeight: 600, margin: 0 }}>You are banned from suggesting questions</p>
-            </div>
-          )}
-        </div>
+        <section className="no-question">
+          <FiHelpCircle className="no-question__icon" />
+          <h2>No Question This Week</h2>
+          <p>Check back next week for a new question!</p>
+          <SuggestQuestionPanel
+            isBanned={ninja.suggestionsBanned}
+            expanded={showSuggestionForm}
+            suggestionText={suggestionText}
+            onToggle={() => setShowSuggestionForm((prev) => !prev)}
+            onChange={setSuggestionText}
+            onSubmit={handleSubmitSuggestion}
+            isSubmitting={submittingSuggestion}
+          />
+        </section>
       )}
     </div>
   );
 }
-

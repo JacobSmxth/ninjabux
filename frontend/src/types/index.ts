@@ -310,3 +310,85 @@ export interface PaginatedNinjaResponse {
   size: number;
   numberOfElements: number;
 }
+
+export interface LedgerTransaction {
+  id: number;
+  createdAt: string;
+  ninjaFirstName: string;
+  ninjaLastName: string;
+  type: string;
+  amount: number;
+  sourceType: string;
+  note?: string;
+}
+
+export interface StalledNinjaSummary {
+  ninjaId: number;
+  ninjaName: string;
+  daysStalled?: number;
+}
+
+export interface BalanceDistributionSummary {
+  zeroBalance?: number;
+  lowBalance?: number;
+  mediumBalance?: number;
+  highBalance?: number;
+  veryHighBalance?: number;
+}
+
+export interface EconomyHealthMetrics {
+  totalBuxInCirculation?: number;
+  totalBuxEarned?: number;
+  totalBuxSpent?: number;
+  spendEarnRatio?: number;
+  balanceDistribution?: BalanceDistributionSummary;
+}
+
+export interface QuizMetricsSummary {
+  totalQuestions?: number;
+  totalAnswers?: number;
+  averageAccuracy?: number;
+  participantsThisWeek?: number;
+  participationRate?: number;
+}
+
+export interface ShopMetricsSummary {
+  totalPurchases?: number;
+  totalPurchasesThisWeek?: number;
+  repeatPurchaseRate?: number;
+  averagePurchaseValue?: number;
+  uniqueShoppersThisWeek?: number;
+}
+
+export interface AchievementMetricsSummary {
+  totalUnlocked?: number;
+  unlockedThisWeek?: number;
+  averageAchievementsPerNinja?: number;
+}
+
+export interface EngagementMetricsSummary {
+  quizMetrics?: QuizMetricsSummary;
+  shopMetrics?: ShopMetricsSummary;
+  achievementMetrics?: AchievementMetricsSummary;
+}
+
+export interface PopularItemStat {
+  itemId: number;
+  itemName: string;
+  purchaseCount?: number;
+  revenue?: number;
+}
+
+export interface ItemPopularityMetrics {
+  mostPopularItems?: PopularItemStat[];
+  leastPopularItems?: PopularItemStat[];
+}
+
+export interface AnalyticsSnapshot {
+  stallDetection?: {
+    stalledNinjas: StalledNinjaSummary[];
+  };
+  economyHealth?: EconomyHealthMetrics;
+  engagement?: EngagementMetricsSummary;
+  itemPopularity?: ItemPopularityMetrics;
+}

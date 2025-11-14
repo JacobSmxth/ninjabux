@@ -3,6 +3,7 @@ import { ninjaApi, shopApi } from '../services/api';
 import type { Ninja, ShopItem, Purchase } from '../types';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useLockContext } from '../context/LockContext';
+import { getBeltTheme, defaultBeltTheme } from '../utils/beltTheme';
 import './Shop.css';
 
 interface Props {
@@ -186,22 +187,18 @@ export default function Shop({ ninjaId }: Props) {
     return badges;
   };
 
-  const getBeltTheme = (belt: string) => {
-    const themes: Record<string, { primary: string; secondary: string }> = {
-      white: { primary: '#ffffff', secondary: '#000000' },
-      yellow: { primary: '#ffd700', secondary: '#000000' },
-      orange: { primary: '#ff8c00', secondary: '#ffffff' },
-      green: { primary: '#32cd32', secondary: '#ffffff' },
-      blue: { primary: '#4169e1', secondary: '#ffffff' },
-      purple: { primary: '#9370db', secondary: '#ffffff' },
-      red: { primary: '#dc143c', secondary: '#ffffff' },
-      brown: { primary: '#8b4513', secondary: '#ffffff' },
-      black: { primary: '#1a1a1a', secondary: '#ffffff' },
-    };
-    return themes[belt.toLowerCase()] || themes.black;
+  const hexToRgba = (hex: string, alpha: number) => {
+    const clean = hex.replace('#', '');
+    const bigint = parseInt(clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
-  const beltTheme = ninja ? getBeltTheme(ninja.currentBeltType) : { primary: '#E31E24', secondary: '#ffffff' };
+  const beltTheme = ninja ? getBeltTheme(ninja.currentBeltType) : defaultBeltTheme;
+  const accentShadow = hexToRgba(beltTheme.accent, 0.35);
+  const accentBorder = hexToRgba(beltTheme.accent, 0.45);
 
   if (loading) {
     return <div className="shop-container"><h2>Loading shop...</h2></div>;
@@ -228,11 +225,12 @@ export default function Shop({ ninjaId }: Props) {
         onConfirm={confirmationModal.onConfirm}
         onCancel={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
       />
-      <div className="shop-header" style={{ borderBottomColor: beltTheme.primary }}>
+      <div className="shop-header" style={{ borderBottomColor: beltTheme.accent }}>
         <h1>NinjaBux Shop</h1>
         <div className="balance-display" style={{
-          background: `linear-gradient(135deg, ${beltTheme.primary} 0%, ${beltTheme.primary}dd 100%)`,
-          borderColor: beltTheme.primary
+          background: `linear-gradient(135deg, ${beltTheme.primary} 0%, ${hexToRgba(beltTheme.accent, 0.35)} 100%)`,
+          borderColor: beltTheme.accent,
+          boxShadow: `0 12px 28px ${accentShadow}`
         }}>
           <span className="balance-label" style={{ color: beltTheme.secondary }}>Your Balance:</span>
           <span className="balance-amount" style={{ color: beltTheme.secondary }}>{ninja.buxBalance.toFixed(2)} Bux</span>
@@ -281,7 +279,7 @@ export default function Shop({ ninjaId }: Props) {
                 <p className="item-description">{item.description}</p>
               </div>
               <div className="item-actions">
-                <span className="item-price" style={{ color: beltTheme.primary }}>{item.price} Bux</span>
+                <span className="item-price" style={{ color: beltTheme.accent }}>{item.price} Bux</span>
                 <div className="purchase-button-wrapper">
                   <button
                     className={`purchase-btn ${!canPurchase ? 'disabled' : ''}`}
@@ -290,9 +288,13 @@ export default function Shop({ ninjaId }: Props) {
                     onMouseEnter={() => !canPurchase && setTooltipItemId(item.id)}
                     onMouseLeave={() => setTooltipItemId(null)}
                     style={canPurchase ? {
-                      background: beltTheme.primary,
-                      color: beltTheme.secondary
-                    } : {}}
+                      background: beltTheme.accent,
+                      color: beltTheme.accentText,
+                      boxShadow: `0 10px 22px ${accentShadow}`
+                    } : {
+                      borderColor: accentBorder,
+                      color: beltTheme.textColor
+                    }}
                   >
                     {canPurchase ? 'Purchase' : canAfford ? 'Limit Reached' : 'Not Enough Bux'}
                   </button>

@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, bigQuestionApi, achievementApi } from '../services/api';
 import type { Ninja, Purchase, BigQuestionResponse, ProgressHistory, AchievementProgress } from '../types';
 import { FiAward, FiHelpCircle, FiDollarSign } from 'react-icons/fi';
 import { useLockContext } from '../context/LockContext';
 import AchievementIcon from '../components/AchievementIcon';
+import { getBeltTheme, defaultBeltTheme } from '../utils/beltTheme';
 import './Dashboard.css';
 
 
@@ -24,11 +25,7 @@ export default function Dashboard({ ninjaId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
-  useEffect(() => {
-    loadData();
-  }, [ninjaId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [ninjaData, unredeemedData, allData, historyData, achievementsData] = await Promise.all([
@@ -55,56 +52,33 @@ export default function Dashboard({ ninjaId }: Props) {
 
       try {
         const questionData = await bigQuestionApi.getThisWeeksQuestion(ninjaId);
-        if (questionData) {
-          setBigQuestion(questionData);
-        } else {
-          setBigQuestion(null);
-        }
-      } catch (err: any) {
-        // dont worry I did this
-        console.error('Error loading question:', err);
+        setBigQuestion(questionData ?? null);
+      } catch (questionError) {
+        console.error('Error loading question:', questionError);
         setBigQuestion(null);
       }
-    } catch (err: any) {
-      if (err.response?.status === 403 || err.message?.includes('Account is locked')) {
-        const errorMsg = err.response?.data?.message || err.message || 'Account is locked';
+    } catch (error) {
+      if (error instanceof Error && ('response' in error ? (error as any).response?.status === 403 : error.message.includes('Account is locked'))) {
+        const errorMsg = (error as any)?.response?.data?.message || error.message || 'Account is locked';
         setLockStatus(true, errorMsg);
       }
       setError('Failed to load data');
-      console.error(err);
+      console.error(error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [ninjaId, setLockStatus]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
 
   const getBeltColor = (belt: string) => {
     return belt.toLowerCase();
   };
 
-  const hexToRgba = (hex: string, alpha: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-
-  const getBeltTheme = (belt: string) => {
-    const themes: Record<string, { primary: string; secondary: string; textColor: string }> = {
-      white: { primary: '#e8e8e8', secondary: '#000000', textColor: '#5a6c7d' },
-      yellow: { primary: '#ffd700', secondary: '#000000', textColor: '#ffd700' },
-      orange: { primary: '#ff8c00', secondary: '#ffffff', textColor: '#ff8c00' },
-      green: { primary: '#32cd32', secondary: '#ffffff', textColor: '#32cd32' },
-      blue: { primary: '#4169e1', secondary: '#ffffff', textColor: '#4169e1' },
-      purple: { primary: '#9370db', secondary: '#ffffff', textColor: '#9370db' },
-      red: { primary: '#dc143c', secondary: '#ffffff', textColor: '#dc143c' },
-      brown: { primary: '#8b4513', secondary: '#ffffff', textColor: '#8b4513' },
-      black: { primary: '#1a1a1a', secondary: '#ffffff', textColor: '#1a1a1a' },
-    };
-    return themes[belt.toLowerCase()] || themes.black;
-  };
-
-  const beltTheme = ninja ? getBeltTheme(ninja.currentBeltType) : { primary: '#E31E24', secondary: '#ffffff', textColor: '#E31E24' };
+  const beltTheme = ninja ? getBeltTheme(ninja.currentBeltType) : defaultBeltTheme;
 
   if (loading) {
     return <div className="dashboard-container"><h2>Loading...</h2></div>;
@@ -141,7 +115,7 @@ export default function Dashboard({ ninjaId }: Props) {
               style={{
                 background: '#000000',
                 color: '#ffffff',
-                border: bigQuestion && !bigQuestion.hasAnswered ? `3px solid ${beltTheme.primary}` : `2px solid ${beltTheme.primary}`,
+                border: '1px solid rgba(15, 23, 42, 0.15)',
                 padding: '0.75rem 1.5rem',
                 borderRadius: '12px',
                 fontSize: '1rem',
@@ -150,14 +124,12 @@ export default function Dashboard({ ninjaId }: Props) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                boxShadow: bigQuestion && !bigQuestion.hasAnswered
-                  ? `0 0 20px ${hexToRgba(beltTheme.primary, 0.5)}, 0 0 40px ${hexToRgba(beltTheme.primary, 0.3)}, 0 0 60px ${hexToRgba(beltTheme.primary, 0.2)}`
-                  : 'none',
+                boxShadow: '0 0 18px rgba(107, 114, 128, 0.35)',
                 animation: bigQuestion && !bigQuestion.hasAnswered ? 'pulse-glow-belt 2s ease-in-out infinite' : 'none',
-                '--belt-color': beltTheme.primary,
-                '--belt-color-rgba-50': hexToRgba(beltTheme.primary, 0.5),
-                '--belt-color-rgba-80': hexToRgba(beltTheme.primary, 0.8),
-                '--belt-color-rgba-30': hexToRgba(beltTheme.primary, 0.3),
+                '--belt-color': '#737373',
+                '--belt-color-rgba-50': 'rgba(115, 115, 115, 0.5)',
+                '--belt-color-rgba-80': 'rgba(115, 115, 115, 0.8)',
+                '--belt-color-rgba-30': 'rgba(115, 115, 115, 0.3)',
               } as React.CSSProperties}
             >
               <FiHelpCircle size={bigQuestion && !bigQuestion.hasAnswered ? 20 : 18} />

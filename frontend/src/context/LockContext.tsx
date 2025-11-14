@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 
 interface LockContextType {
   isLocked: boolean;
@@ -18,6 +18,20 @@ export function LockProvider({ children }: { children: ReactNode }) {
     setLockMessage(message || 'Your account is locked. Please get back to work!');
   }, []);
 
+  const getErrorDetails = (error: unknown): { status?: number; message?: string } => {
+    if (error instanceof Error && !('response' in error)) {
+      return { message: error.message };
+    }
+    if (typeof error === 'object' && error !== null && 'response' in error) {
+      const response = (error as { response?: { status?: number; data?: { message?: string } } }).response;
+      return {
+        status: response?.status,
+        message: response?.data?.message,
+      };
+    }
+    return {};
+  };
+
   const checkLockStatus = useCallback(async (ninjaId: number) => {
     try {
       const { ninjaApi } = await import('../services/api');
@@ -28,11 +42,12 @@ export function LockProvider({ children }: { children: ReactNode }) {
       } else {
         setIsLocked(false);
       }
-    } catch (err: any) {
-      console.error('Failed to check lock status:', err);
+    } catch (error: unknown) {
+      console.error('Failed to check lock status:', error);
+      const { status, message } = getErrorDetails(error);
       // 403 means locked, handle it
-      if (err.response?.status === 403 || err.message?.includes('Account is locked')) {
-        const errorMsg = err.response?.data?.message || err.message || 'Your account is locked. Please get back to work!';
+      if (status === 403 || (message && message.includes('Account is locked'))) {
+        const errorMsg = message || 'Your account is locked. Please get back to work!';
         setIsLocked(true);
         setLockMessage(errorMsg);
       } else {
@@ -49,6 +64,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useLockContext() {
   const context = useContext(LockContext);
   if (!context) {
@@ -56,4 +72,3 @@ export function useLockContext() {
   }
   return context;
 }
-

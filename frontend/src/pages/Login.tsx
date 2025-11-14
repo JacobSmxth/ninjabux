@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ninjaApi } from '../services/api';
-import type { Ninja } from '../types';
 import './Login.css';
 
 interface Props {
@@ -27,16 +26,17 @@ export default function Login({ onLogin, onSwitchToAdmin }: Props) {
       setLoading(true);
       const ninja = await ninjaApi.loginByUsername(trimmedUsername);
       onLogin(ninja.id);
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (error) {
+      if (error instanceof Error && 'response' in error && (error as any).response?.status === 404) {
         setError(`No ninja found with username: ${trimmedUsername}`);
-      } else if (err.response?.status === 403 || err.message?.includes('Account is locked')) {
-        const errorMsg = err.response?.data?.message || err.message || 'Your account is locked. Please get back to work!';
+      } else if ((error as any)?.response?.status === 403 || (error as Error).message?.includes('Account is locked')) {
+        const responseMessage = (error as any)?.response?.data?.message;
+        const errorMsg = responseMessage || (error as Error).message || 'Your account is locked. Please get back to work!';
         setError(errorMsg);
       } else {
         setError('Failed to connect to server. Make sure the backend is running!');
       }
-      console.error(err);
+      console.error(error);
     } finally {
       setLoading(false);
     }

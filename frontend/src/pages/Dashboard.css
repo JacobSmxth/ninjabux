@@ -67,6 +67,10 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 1px;
+  max-width: clamp(12rem, 30vw, 22rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .progress-inline {
@@ -86,6 +90,10 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 1px;
+  max-width: clamp(12rem, 30vw, 22rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .belt-display {

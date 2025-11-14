@@ -1,5 +1,5 @@
-import axios from 'axios';
-import type { Ninja, ShopItem, Purchase, CreateNinjaRequest, UpdateProgressRequest, PurchaseRequest, Admin, AdminLoginRequest, UpdateNinjaRequest, LeaderboardResponse, BigQuestion, BigQuestionResponse, CreateBigQuestionRequest, AnswerBigQuestionRequest, SuggestQuestionRequest, CreateShopItemRequest, ProgressHistory, ProgressHistoryCorrectionRequest, AdminAuditLog, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementProgress, CreateAchievementRequest, AwardAchievementRequest, AchievementCategory, PaginatedNinjaResponse } from '../types';
+import axios, { type AxiosError } from 'axios';
+import type { Ninja, ShopItem, Purchase, CreateNinjaRequest, UpdateProgressRequest, PurchaseRequest, Admin, AdminLoginRequest, UpdateNinjaRequest, LeaderboardResponse, BigQuestion, BigQuestionResponse, CreateBigQuestionRequest, AnswerBigQuestionRequest, SuggestQuestionRequest, CreateShopItemRequest, ProgressHistory, ProgressHistoryCorrectionRequest, AdminAuditLog, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementProgress, CreateAchievementRequest, AwardAchievementRequest, AchievementCategory, PaginatedNinjaResponse, AnalyticsSnapshot, LedgerTransaction } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
   (import.meta.env.DEV && window.location.hostname === 'localhost' 
@@ -15,6 +15,21 @@ const api = axios.create({
   },
   timeout: 10000,
 });
+
+const isAxiosError = (error: unknown): error is AxiosError => axios.isAxiosError(error);
+
+const throwWithResponseMessage = (error: AxiosError, fallback: string): never => {
+  const responseMessage = (error.response?.data as { message?: string } | undefined)?.message;
+  const message = responseMessage || fallback;
+  const customError = new Error(message);
+  (customError as AxiosError).response = error.response;
+  throw customError;
+};
+
+interface BackendError extends Error {
+  response?: AxiosError['response'];
+  status?: number;
+}
 
 api.interceptors.request.use(
   (config) => {
@@ -64,9 +79,9 @@ api.interceptors.response.use(
     }
 
     if (error.response?.data?.message) {
-      const backendError = new Error(error.response.data.message);
-      (backendError as any).response = error.response;
-      (backendError as any).status = error.response.status;
+      const backendError: BackendError = new Error(error.response.data.message);
+      backendError.response = error.response;
+      backendError.status = error.response.status;
       throw backendError;
     }
     throw error;
@@ -105,13 +120,11 @@ export const ninjaApi = {
     try {
       const response = await api.get<Ninja>(`/ninjas/${id}`);
       return response.data;
-    } catch (err: any) {
-      if (err.response?.status === 403) {
-        const error = new Error(err.response?.data?.message || 'Account is locked');
-        (error as any).response = err.response;
-        throw error;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 403) {
+        throwWithResponseMessage(error, 'Account is locked');
       }
-      throw err;
+      throw error;
     }
   },
 
@@ -119,13 +132,11 @@ export const ninjaApi = {
     try {
       const response = await api.get<Ninja>(`/ninjas/login/${username}`);
       return response.data;
-    } catch (err: any) {
-      if (err.response?.status === 403) {
-        const error = new Error(err.response?.data?.message || 'Account is locked');
-        (error as any).response = err.response;
-        throw error;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 403) {
+        throwWithResponseMessage(error, 'Account is locked');
       }
-      throw err;
+      throw error;
     }
   },
 
@@ -138,13 +149,11 @@ export const ninjaApi = {
     try {
       const response = await api.put<Ninja>(`/ninjas/${id}/progress`, data);
       return response.data;
-    } catch (err: any) {
-      if (err.response?.status === 403) {
-        const error = new Error(err.response?.data?.message || 'Account is locked');
-        (error as any).response = err.response;
-        throw error;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 403) {
+        throwWithResponseMessage(error, 'Account is locked');
       }
-      throw err;
+      throw error;
     }
   },
 
@@ -160,12 +169,12 @@ export const ninjaApi = {
         headers: adminUsername ? { 'X-Admin-Username': adminUsername } : {},
         validateStatus: (status) => status === 204 || status < 500, // Accept 204 No Content as success
       });
-    } catch (err: any) {
+    } catch (error) {
       // 404 means not found, everything else is a problem
-      if (err.response?.status === 404) {
+      if (isAxiosError(error) && error.response?.status === 404) {
         throw new Error('Ninja not found');
       }
-      throw err;
+      throw error;
     }
   },
 
@@ -232,18 +241,16 @@ export const ninjaApi = {
         headers: adminUsername ? { 'X-Admin-Username': adminUsername } : {},
       });
       return response.data;
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        const error = new Error(err.response?.data?.message || 'Ninja not found');
-        (error as any).response = err.response;
-        throw error;
+    } catch (error) {
+      if (isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          throwWithResponseMessage(error, 'Ninja not found');
+        }
+        if (error.response?.status === 400) {
+          throwWithResponseMessage(error, 'Failed to lock account');
+        }
       }
-      if (err.response?.status === 400) {
-        const error = new Error(err.response?.data?.message || 'Failed to lock account');
-        (error as any).response = err.response;
-        throw error;
-      }
-      throw err;
+      throw error;
     }
   },
 
@@ -254,18 +261,16 @@ export const ninjaApi = {
         headers: adminUsername ? { 'X-Admin-Username': adminUsername } : {},
       });
       return response.data;
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        const error = new Error(err.response?.data?.message || 'Ninja not found');
-        (error as any).response = err.response;
-        throw error;
+    } catch (error) {
+      if (isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          throwWithResponseMessage(error, 'Ninja not found');
+        }
+        if (error.response?.status === 400) {
+          throwWithResponseMessage(error, 'Failed to unlock account');
+        }
       }
-      if (err.response?.status === 400) {
-        const error = new Error(err.response?.data?.message || 'Failed to unlock account');
-        (error as any).response = err.response;
-        throw error;
-      }
-      throw err;
+      throw error;
     }
   },
 };
@@ -290,13 +295,11 @@ export const shopApi = {
     try {
       const response = await api.post<Purchase>('/shop/purchase', data);
       return response.data;
-    } catch (err: any) {
-      if (err.response?.status === 403) {
-        const error = new Error(err.response?.data?.message || 'Account is locked');
-        (error as any).response = err.response;
-        throw error;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 403) {
+        throwWithResponseMessage(error, 'Account is locked');
       }
-      throw err;
+      throw error;
     }
   },
 
@@ -412,7 +415,7 @@ export const bigQuestionApi = {
       }
       
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // catch everything else and return null because errors are scary
       console.error('Unexpected error loading question:', error);
       return null;
@@ -455,9 +458,8 @@ export const bigQuestionApi = {
     return response.data;
   },
 
-  submitAnswer: async (questionId: number, data: AnswerBigQuestionRequest): Promise<any> => {
-    const response = await api.post(`/big-question/${questionId}/answer`, data);
-    return response.data;
+  submitAnswer: async (questionId: number, data: AnswerBigQuestionRequest): Promise<void> => {
+    await api.post(`/big-question/${questionId}/answer`, data);
   },
 
   getAllQuestions: async (): Promise<BigQuestion[]> => {
@@ -602,9 +604,9 @@ export const achievementApi = {
 };
 
 export const analyticsApi = {
-  getAnalytics: async (): Promise<any> => {
+  getAnalytics: async (): Promise<AnalyticsSnapshot> => {
     const adminUsername = localStorage.getItem('adminUsername');
-    const response = await api.get('/analytics', {
+    const response = await api.get<AnalyticsSnapshot>('/analytics', {
       headers: { 'X-Admin-Username': adminUsername || '' },
     });
     return response.data;
@@ -612,14 +614,14 @@ export const analyticsApi = {
 };
 
 export const ledgerApi = {
-  getLedgerHistory: async (ninjaId: number): Promise<any[]> => {
-    const response = await api.get(`/ledger/ninja/${ninjaId}`);
+  getLedgerHistory: async (ninjaId: number): Promise<LedgerTransaction[]> => {
+    const response = await api.get<LedgerTransaction[]>(`/ledger/ninja/${ninjaId}`);
     return response.data;
   },
 
-  getAllLedgerTransactions: async (limit: number = 100): Promise<any[]> => {
+  getAllLedgerTransactions: async (limit: number = 100): Promise<LedgerTransaction[]> => {
     const adminUsername = localStorage.getItem('adminUsername');
-    const response = await api.get(`/ledger/all?limit=${limit}`, {
+    const response = await api.get<LedgerTransaction[]>(`/ledger/all?limit=${limit}`, {
       headers: { 'X-Admin-Username': adminUsername || '' },
     });
     return response.data;

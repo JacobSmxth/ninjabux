@@ -9,12 +9,11 @@ interface NotificationMessage {
   message: string;
   ninjaId?: number;
   timestamp: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLocked: boolean, message: string) => void) {
   const clientRef = useRef<Client | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp } = useToastContext();
 
   useEffect(() => {
@@ -25,7 +24,7 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
           : `${window.location.protocol}//${window.location.hostname}:8080/ws`;
 
         const client = new Client({
-            webSocketFactory: () => new SockJS(wsUrl) as any,
+            webSocketFactory: () => new SockJS(wsUrl) as WebSocket,
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
@@ -36,8 +35,8 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
                 try {
                   const notification: NotificationMessage = JSON.parse(message.body);
                   handleNotification(notification);
-                } catch (err) {
-                  console.error('Failed to parse notification:', err);
+                } catch (error) {
+                  console.error('Failed to parse notification:', error);
                 }
               });
             }
@@ -46,8 +45,8 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
               try {
                 const notification: NotificationMessage = JSON.parse(message.body);
                 handleNotification(notification);
-              } catch (err) {
-                console.error('Failed to parse announcement:', err);
+              } catch (error) {
+                console.error('Failed to parse announcement:', error);
               }
             });
           },
@@ -64,8 +63,8 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
 
         client.activate();
         clientRef.current = client;
-      } catch (err) {
-        console.error('Failed to connect WebSocket:', err);
+      } catch (error) {
+        console.error('Failed to connect WebSocket:', error);
       }
     };
 
@@ -151,13 +150,9 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
 
     // Cleanup on unmount
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
       if (clientRef.current) {
         clientRef.current.deactivate();
       }
     };
   }, [ninjaId, showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp, onLockStatusChange]);
 }
-

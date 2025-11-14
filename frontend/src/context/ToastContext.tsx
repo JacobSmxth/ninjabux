@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { useToast } from '../hooks/useToast';
 
 type ToastContextType = ReturnType<typeof useToast>;
@@ -10,6 +10,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return <ToastContext.Provider value={toast}>{children}</ToastContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToastContext() {
   const context = useContext(ToastContext);
   if (!context) {
@@ -17,6 +18,5 @@ export function useToastContext() {
   }
   return context;
 }
-
 
 
