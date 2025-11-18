@@ -266,21 +266,19 @@ export default function Shop({ ninjaId }: Props) {
               key={item.id} 
               className={`shop-item-row ${!canPurchase ? 'restricted' : ''} ${!canAfford ? 'unaffordable' : ''}`}
             >
-              <div className="item-info">
-                <div className="item-header">
-                  <h3>{item.name}</h3>
-                  {restrictionBadges.length > 0 && (
-                    <div className="restriction-badges">
-                      {restrictionBadges.map((badge, idx) => (
-                        <span key={idx} className="restriction-badge">{badge}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <p className="item-description">{item.description}</p>
+              <div className="item-header-grid">
+                <h3>{item.name}</h3>
+                <span className="shop-item-price" style={{ color: beltTheme.accent }}>{formatBux(item.price)} Bux</span>
               </div>
-              <div className="item-actions">
-                <span className="item-price" style={{ color: beltTheme.accent }}>{formatBux(item.price)} Bux</span>
+              <p className="item-description">{item.description}</p>
+              {restrictionBadges.length > 0 && (
+                <div className="restriction-badges">
+                  {restrictionBadges.map((badge, idx) => (
+                    <span key={idx} className="restriction-badge">{badge}</span>
+                  ))}
+                </div>
+              )}
+              <div className="item-footer">
                 <div className="purchase-button-wrapper">
                   <button
                     className={`purchase-btn ${!canPurchase ? 'disabled' : ''}`}
