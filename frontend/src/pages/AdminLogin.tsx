@@ -1,17 +1,15 @@
 import { useState } from 'react';
-import { adminApi } from '../services/api';
-import type { Admin } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
-interface Props {
-  onLogin: (admin: Admin) => void;
-}
-
-export default function AdminLogin({ onLogin }: Props) {
+export default function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { loginAdmin } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,10 +22,10 @@ export default function AdminLogin({ onLogin }: Props) {
 
     try {
       setLoading(true);
-      const admin = await adminApi.login({ username: username.trim(), password });
-      onLogin(admin);
+      await loginAdmin(username.trim(), password);
+      navigate('/admin');
     } catch (error) {
-      if (error instanceof Error && 'response' in error && (error as any).response?.status === 401) {
+      if ((error as any)?.response?.status === 401) {
         setError('Invalid username or password');
       } else {
         setError('Failed to connect to server');

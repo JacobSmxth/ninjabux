@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { ninjaApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
 interface Props {
-  onLogin: (id: number) => void;
   onSwitchToAdmin: () => void;
 }
 
-export default function Login({ onLogin, onSwitchToAdmin }: Props) {
+export default function Login({ onSwitchToAdmin }: Props) {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { loginNinja } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,15 +26,11 @@ export default function Login({ onLogin, onSwitchToAdmin }: Props) {
 
     try {
       setLoading(true);
-      const ninja = await ninjaApi.loginByUsername(trimmedUsername);
-      onLogin(ninja.id);
+      await loginNinja(trimmedUsername);
+      navigate('/dashboard');
     } catch (error) {
-      if (error instanceof Error && 'response' in error && (error as any).response?.status === 404) {
-        setError(`No ninja found with username: ${trimmedUsername}`);
-      } else if ((error as any)?.response?.status === 403 || (error as Error).message?.includes('Account is locked')) {
-        const responseMessage = (error as any)?.response?.data?.message;
-        const errorMsg = responseMessage || (error as Error).message || 'Your account is locked. Please get back to work!';
-        setError(errorMsg);
+      if ((error as any)?.response?.status === 401) {
+        setError(`No ninja found with username: ${trimmedUsername} or account is locked`);
       } else {
         setError('Failed to connect to server. Make sure the backend is running!');
       }

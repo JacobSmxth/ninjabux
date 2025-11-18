@@ -1,5 +1,5 @@
 import axios, { type AxiosError } from 'axios';
-import type { Ninja, ShopItem, Purchase, CreateNinjaRequest, UpdateProgressRequest, PurchaseRequest, Admin, AdminLoginRequest, UpdateNinjaRequest, LeaderboardResponse, BigQuestion, BigQuestionResponse, CreateBigQuestionRequest, AnswerBigQuestionRequest, SuggestQuestionRequest, CreateShopItemRequest, ProgressHistory, ProgressHistoryCorrectionRequest, AdminAuditLog, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementProgress, CreateAchievementRequest, AwardAchievementRequest, AchievementCategory, PaginatedNinjaResponse, AnalyticsSnapshot, LedgerTransaction } from '../types';
+import type { Ninja, ShopItem, Purchase, CreateNinjaRequest, UpdateProgressRequest, PurchaseRequest, Admin, AdminLoginRequest, UpdateNinjaRequest, LeaderboardResponse, BigQuestion, BigQuestionResponse, CreateBigQuestionRequest, AnswerBigQuestionRequest, SuggestQuestionRequest, CreateShopItemRequest, ProgressHistory, ProgressHistoryCorrectionRequest, AdminAuditLog, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementProgress, CreateAchievementRequest, AwardAchievementRequest, AchievementCategory, PaginatedNinjaResponse, AnalyticsSnapshot, LedgerTransaction, NinjaLoginLog } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
   (import.meta.env.DEV && window.location.hostname === 'localhost' 
@@ -33,6 +33,11 @@ interface BackendError extends Error {
 
 api.interceptors.request.use(
   (config) => {
+    const token = sessionStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     const skipLogging = config.url?.includes('/big-question/week/');
     if (!skipLogging) {
       console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
@@ -398,6 +403,16 @@ export const adminApi = {
       `/admin/announcement?currentAdminUsername=${encodeURIComponent(currentAdminUsername)}&currentAdminPassword=${encodeURIComponent(currentAdminPassword)}`,
       { title, message }
     );
+  },
+
+  getNinjaLoginLogs: async (limit: number = 100): Promise<NinjaLoginLog[]> => {
+    const response = await api.get<NinjaLoginLog[]>(`/admin/ninja-login-logs?limit=${limit}`);
+    return response.data;
+  },
+
+  getByUsername: async (username: string): Promise<Admin> => {
+    const response = await api.get<Admin>(`/admin/by-username/${encodeURIComponent(username)}`);
+    return response.data;
   },
 };
 

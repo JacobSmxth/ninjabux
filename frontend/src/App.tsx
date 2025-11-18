@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Login from './pages/Login';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -14,7 +14,8 @@ import { useToastContext } from './context/ToastContext';
 import { useWebSocket } from './hooks/useWebSocket';
 import { ToastProvider } from './context/ToastContext';
 import { LockProvider, useLockContext } from './context/LockContext';
-import type { Admin } from './types';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { FiLock } from 'react-icons/fi';
 import './App.css';
 
@@ -43,108 +44,76 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isLocked, lockMessage, setLockStatus, checkLockStatus } = useLockContext();
+  const { isAuthenticated, userId, logout: authLogout, userType } = useAuth();
 
-  const [selectedNinjaId, setSelectedNinjaId] = useState<number | null>(() => {
-    const saved = localStorage.getItem('selectedNinjaId');
-    return saved ? parseInt(saved) : null;
-  });
-
-  const [admin, setAdmin] = useState<Admin | null>(() => {
-    const saved = localStorage.getItem('admin');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const handleLockStatusChange = (locked: boolean, message: string) => {
+  const handleLockStatusChange = useCallback((locked: boolean, message: string) => {
     setLockStatus(locked, message);
-  };
+  }, [setLockStatus]);
 
   useEffect(() => {
-    // check lock status on login and route changes
-    if (selectedNinjaId) {
-      checkLockStatus(selectedNinjaId);
-      // also poll periodically because external changes happen
+    if (userId && userType === 'NINJA') {
+      checkLockStatus(userId);
       const interval = setInterval(() => {
-        checkLockStatus(selectedNinjaId);
-      }, 5000); // check every 5 seconds
+        checkLockStatus(userId);
+      }, 5000);
       return () => clearInterval(interval);
     } else {
       setLockStatus(false, '');
     }
-  }, [selectedNinjaId, location.pathname, checkLockStatus, setLockStatus]);
-
-  useEffect(() => {
-    if (selectedNinjaId) {
-      localStorage.setItem('selectedNinjaId', selectedNinjaId.toString());
-      if (location.pathname !== '/' && !location.pathname.startsWith('/shop') && !location.pathname.startsWith('/leaderboard') && !location.pathname.startsWith('/achievements') && !location.pathname.startsWith('/quiz')) {
-        navigate('/', { replace: true });
-      }
-    } else {
-      localStorage.removeItem('selectedNinjaId');
-    }
-  }, [selectedNinjaId, location.pathname, navigate]);
-
-  useEffect(() => {
-    if (admin) {
-      localStorage.setItem('admin', JSON.stringify(admin));
-      if (!location.pathname.startsWith('/admin') && location.pathname !== '/admin-login') {
-        navigate('/admin', { replace: true });
-      }
-    } else {
-      localStorage.removeItem('admin');
-    }
-  }, [admin, location.pathname, navigate]);
+  }, [userId, userType, location.pathname, checkLockStatus, setLockStatus]);
 
   const handleLogout = () => {
-    setSelectedNinjaId(null);
-    localStorage.removeItem('selectedNinjaId');
-    navigate('/', { replace: true });
-  };
-
-  const handleAdminLogout = () => {
-    setAdmin(null);
-    localStorage.removeItem('admin');
-    navigate('/admin-login', { replace: true });
+    authLogout();
   };
 
   const switchToAdmin = () => {
-    setSelectedNinjaId(null);
     navigate('/admin-login', { replace: true });
   };
 
-  useWebSocket(selectedNinjaId, handleLockStatusChange);
+  useWebSocket(userType === 'NINJA' ? userId : null, handleLockStatusChange);
 
-  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/admin-login');
-
-  if (isAdminRoute) {
-    if (!admin) {
-      return (
-        <>
-          <ToastHost />
-          <Routes>
-            <Route path="/admin" element={<AdminLogin onLogin={setAdmin} />} />
-            <Route path="/admin-login" element={<AdminLogin onLogin={setAdmin} />} />
-            <Route path="*" element={<AdminLogin onLogin={setAdmin} />} />
-          </Routes>
-        </>
-      );
-    }
+  if (!isAuthenticated && (location.pathname === '/' || location.pathname === '/admin-login')) {
     return (
       <>
         <ToastHost />
         <Routes>
-          <Route path="/admin" element={<AdminDashboard onLogout={handleAdminLogout} admin={admin} />} />
-          <Route path="/admin/ninja/:id" element={<NinjaDetail />} />
-          <Route path="*" element={<AdminDashboard onLogout={handleAdminLogout} admin={admin} />} />
+          <Route path="/" element={<Login onSwitchToAdmin={switchToAdmin} />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
         </Routes>
       </>
     );
   }
 
-  if (!selectedNinjaId) {
+  if (!isAuthenticated) {
     return (
       <>
         <ToastHost />
-        <Login onLogin={setSelectedNinjaId} onSwitchToAdmin={switchToAdmin} />
+        <Login onSwitchToAdmin={switchToAdmin} />
+      </>
+    );
+  }
+
+  if (userType === 'ADMIN') {
+    return (
+      <>
+        <ToastHost />
+        <Routes>
+          <Route path="/admin" element={
+            <ProtectedRoute requireAdmin>
+              <AdminDashboard onLogout={handleLogout} />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/ninja/:id" element={
+            <ProtectedRoute requireAdmin>
+              <NinjaDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="*" element={
+            <ProtectedRoute requireAdmin>
+              <AdminDashboard onLogout={handleLogout} />
+            </ProtectedRoute>
+          } />
+        </Routes>
       </>
     );
   }
@@ -199,12 +168,41 @@ function AppContent() {
       </nav>
       <main className="main-content" style={{ opacity: isLocked ? 0.3 : 1, pointerEvents: isLocked ? 'none' : 'auto' }}>
         <Routes>
-          <Route path="/" element={<Dashboard ninjaId={selectedNinjaId} />} />
-          <Route path="/achievements" element={<AchievementGallery ninjaId={selectedNinjaId} />} />
-          <Route path="/shop" element={<Shop ninjaId={selectedNinjaId} />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/quiz" element={<Quiz ninjaId={selectedNinjaId} />} />
-          <Route path="*" element={<Dashboard ninjaId={selectedNinjaId} />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Dashboard ninjaId={userId!} />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard ninjaId={userId!} />
+            </ProtectedRoute>
+          } />
+          <Route path="/achievements" element={
+            <ProtectedRoute>
+              <AchievementGallery ninjaId={userId!} />
+            </ProtectedRoute>
+          } />
+          <Route path="/shop" element={
+            <ProtectedRoute>
+              <Shop ninjaId={userId!} />
+            </ProtectedRoute>
+          } />
+          <Route path="/leaderboard" element={
+            <ProtectedRoute>
+              <Leaderboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/quiz" element={
+            <ProtectedRoute>
+              <Quiz ninjaId={userId!} />
+            </ProtectedRoute>
+          } />
+          <Route path="*" element={
+            <ProtectedRoute>
+              <Dashboard ninjaId={userId!} />
+            </ProtectedRoute>
+          } />
         </Routes>
       </main>
     </div>
@@ -214,11 +212,13 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <ToastProvider>
-        <LockProvider>
-          <AppContent />
-        </LockProvider>
-      </ToastProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <LockProvider>
+            <AppContent />
+          </LockProvider>
+        </ToastProvider>
+      </AuthProvider>
     </Router>
   );
 }
