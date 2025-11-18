@@ -1,19 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, bigQuestionApi, adminApi, achievementApi, analyticsApi, ledgerApi } from '../services/api';
-import type { Ninja, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest, AwardAchievementRequest, AnalyticsSnapshot, LedgerTransaction } from '../types';
+import type { Ninja, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest, AwardAchievementRequest, AnalyticsSnapshot, LedgerTransaction, NinjaLoginLog } from '../types';
 import { FiEdit2, FiTrash2, FiPause, FiPlay, FiUsers, FiShoppingBag, FiHelpCircle, FiAward, FiSettings, FiSearch, FiPlus, FiDollarSign, FiShoppingCart, FiTarget, FiTrendingUp, FiClock, FiLock } from 'react-icons/fi';
 import { useToastContext } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import ConfirmationModal from '../components/ConfirmationModal';
 import NinjaFormModal, { type NinjaFormValues } from '../components/NinjaFormModal';
 import AchievementIcon from '../components/AchievementIcon';
 import { INITIAL_NINJA_PROGRESS, normalizeProgress } from '../utils/ninjaProgress';
+import { formatBux } from '../utils/format';
+import PasswordPromptModal from '../components/PasswordPromptModal';
 import './AdminDashboard.css';
 
 interface Props {
   onLogout: () => void;
-  admin: Admin | null;
 }
 
 interface NinjaWithPurchases extends Ninja {
@@ -36,7 +38,24 @@ interface QuestionFormState {
 }
 
 type TabType = 'activity' | 'ninjas' | 'shop' | 'question' | 'achievements' | 'analytics' | 'settings';
-type OverviewSubTab = 'activity' | 'ledger' | 'announcement';
+type OverviewSubTab = 'activity' | 'ledger' | 'announcement' | 'ninja-logins';
+
+const ADMIN_FORM_INITIAL_STATE = {
+  username: '',
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+};
+
+interface PasswordPromptConfig {
+  isOpen: boolean;
+  title: string;
+  message?: string;
+  confirmText?: string;
+  cancelText?: string;
+  onSubmit: (password: string) => Promise<void> | void;
+}
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (error instanceof Error && !('response' in error)) {
@@ -212,9 +231,11 @@ function SuggestionReviewList({
   );
 }
 
-export default function AdminDashboard({ onLogout, admin }: Props) {
+export default function AdminDashboard({ onLogout }: Props) {
+  const { username } = useAuth();
   const navigate = useNavigate();
   const { toasts, removeToast, success, error: showError } = useToastContext();
+  const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
 
   // remember which tab admin was on so it persists across reloads
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -235,6 +256,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
+  const [ninjaLoginLogs, setNinjaLoginLogs] = useState<NinjaLoginLog[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // pagination state because loading everything breaks the browser
@@ -286,14 +308,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [questionFormData, setQuestionFormData] = useState<QuestionFormState>(createEmptyQuestionForm());
 
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
-  const [adminFormData, setAdminFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    currentPassword: '',
-  });
+  const [adminFormData, setAdminFormData] = useState({ ...ADMIN_FORM_INITIAL_STATE });
 
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordFormData, setPasswordFormData] = useState({
@@ -306,6 +321,22 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   const [adminListPassword, setAdminListPassword] = useState('');
   const [showAdminList, setShowAdminList] = useState(false);
   const [deletingAdminId, setDeletingAdminId] = useState<number | null>(null);
+  const [passwordPromptConfig, setPasswordPromptConfig] = useState<PasswordPromptConfig>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    onSubmit: async () => {}
+  });
+
+  const closePasswordPrompt = () => setPasswordPromptConfig((prev) => ({ ...prev, isOpen: false }));
+  const showPasswordPrompt = (config: Omit<PasswordPromptConfig, 'isOpen'>) => {
+    setPasswordPromptConfig({
+      isOpen: true,
+      ...config,
+    });
+  };
 
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
@@ -442,6 +473,16 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     }
   }, [showError]);
 
+  const loadNinjaLoginLogs = useCallback(async () => {
+    try {
+      const logs = await adminApi.getNinjaLoginLogs(100);
+      setNinjaLoginLogs(logs);
+    } catch (error) {
+      showError('Failed to load ninja login logs');
+      console.error(error);
+    }
+  }, [showError]);
+
   const loadAnalytics = useCallback(async () => {
     try {
       setAnalyticsLoading(true);
@@ -456,9 +497,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   }, [showError]);
 
   const loadAllAdmins = useCallback(async () => {
-    if (!admin || !adminListPassword) return;
+    if (!username || !adminListPassword) return;
     try {
-      const admins = await adminApi.getAllAdmins(admin.username, adminListPassword);
+      const admins = await adminApi.getAllAdmins(username, adminListPassword);
       setAllAdmins(admins);
     } catch (error) {
       if (getErrorStatus(error) === 401) {
@@ -470,7 +511,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       }
       console.error(error);
     }
-  }, [admin, adminListPassword, showError]);
+  }, [username, adminListPassword, showError]);
 
   const loadData = useCallback(async () => {
     try {
@@ -492,7 +533,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
         await loadAnalytics();
       }
       if (activeTab === 'settings') {
-        if (showAdminList && admin) {
+        if (showAdminList && username) {
           await loadAllAdmins();
         }
       }
@@ -502,9 +543,20 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, admin, loadAchievements, loadAllAdmins, loadAnalytics, loadNinjas, loadPendingSuggestions, loadQuestions, loadShopItems, showAdminList, showError]);
+  }, [activeTab, username, loadAchievements, loadAllAdmins, loadAnalytics, loadNinjas, loadPendingSuggestions, loadQuestions, loadShopItems, showAdminList, showError]);
 
   useEffect(() => {
+    const loadCurrentAdmin = async () => {
+      if (username) {
+        try {
+          const admin = await adminApi.getByUsername(username);
+          setCurrentAdmin(admin);
+        } catch (error) {
+          console.error('Failed to load current admin:', error);
+        }
+      }
+    };
+    loadCurrentAdmin();
     loadData();
     loadAuditLogs();
   }, [loadData, loadAuditLogs]);
@@ -553,7 +605,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
 
     try {
       await bigQuestionApi.rejectQuestion(questionId, {
-        adminUsername: admin?.username || '',
+        adminUsername: username || '',
         reason: reason.trim()
       });
       await loadPendingSuggestions();
@@ -595,7 +647,10 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     if (activeTab === 'activity' && overviewSubTab === 'ledger') {
       loadLedgerTransactions();
     }
-  }, [activeTab, overviewSubTab, loadLedgerTransactions]);
+    if (activeTab === 'activity' && overviewSubTab === 'ninja-logins') {
+      loadNinjaLoginLogs();
+    }
+  }, [activeTab, overviewSubTab, loadLedgerTransactions, loadNinjaLoginLogs]);
 
   const handleCreateNinja = () => {
     setIsCreatingNinja(true);
@@ -1031,45 +1086,38 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
   // admin management functions
   const handleCreateAdmin = () => {
     setIsCreatingAdmin(true);
-    setAdminFormData({
-      username: '',
-      email: '',
-      password: '',
-      firstName: '',
-      lastName: '',
-      currentPassword: '',
-    });
+    setAdminFormData({ ...ADMIN_FORM_INITIAL_STATE });
   };
 
   const handleSubmitAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!admin) return;
+    if (!username) return;
 
-    try {
-      const data: CreateAdminByAdminRequest = {
-        currentAdminUsername: admin.username,
-        currentAdminPassword: adminFormData.currentPassword,
-        username: adminFormData.username,
-        email: adminFormData.email,
-        password: adminFormData.password,
-        firstName: adminFormData.firstName,
-        lastName: adminFormData.lastName,
-      };
-      await adminApi.createAdmin(data);
-      setIsCreatingAdmin(false);
-      setAdminFormData({
-        username: '',
-        email: '',
-        password: '',
-        firstName: '',
-        lastName: '',
-        currentPassword: '',
-      });
-      success('Admin account created successfully!');
-    } catch (error) {
-      showError(getErrorMessage(error, 'Failed to create admin account'));
-      console.error(error);
-    }
+    showPasswordPrompt({
+      title: 'Verify Identity',
+      message: 'Enter your password to create a new admin account.',
+      confirmText: 'Create Admin',
+      onSubmit: async (password) => {
+        try {
+          const data: CreateAdminByAdminRequest = {
+            currentAdminUsername: username,
+            currentAdminPassword: password,
+            username: adminFormData.username,
+            email: adminFormData.email,
+            password: adminFormData.password,
+            firstName: adminFormData.firstName,
+            lastName: adminFormData.lastName,
+          };
+          await adminApi.createAdmin(data);
+          setIsCreatingAdmin(false);
+          setAdminFormData({ ...ADMIN_FORM_INITIAL_STATE });
+          success('Admin account created successfully!');
+        } catch (error) {
+          console.error(error);
+          throw new Error(getErrorMessage(error, 'Failed to create admin account'));
+        }
+      },
+    });
   };
 
   const handleChangePassword = () => {
@@ -1083,7 +1131,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
 
   const handleSubmitPasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!admin) return;
+    if (!username) return;
 
     if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
       showError('New passwords do not match');
@@ -1100,7 +1148,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
         oldPassword: passwordFormData.oldPassword,
         newPassword: passwordFormData.newPassword,
       };
-      await adminApi.changePassword(admin.username, data);
+      await adminApi.changePassword(username, data);
       setIsChangingPassword(false);
       setPasswordFormData({
         oldPassword: '',
@@ -1127,31 +1175,33 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
     }
   };
 
-  const handleShowAdminList = async () => {
-    const password = prompt('Enter your password to view admin accounts:');
-    if (!password) return;
-    setAdminListPassword(password);
-    setShowAdminList(true);
-    try {
-      if (!admin) return;
-      const admins = await adminApi.getAllAdmins(admin.username, password);
-      setAllAdmins(admins);
-    } catch (error) {
-      if (getErrorStatus(error) === 401) {
-        showError('Invalid password');
-        setAdminListPassword('');
-        setShowAdminList(false);
-      } else {
-        showError(getErrorMessage(error, 'Failed to load admin list'));
-      }
-      console.error(error);
-    }
+  const handleShowAdminList = () => {
+    if (!username) return;
+    showPasswordPrompt({
+      title: 'View Admin Accounts',
+      message: 'Enter your password to view all admin accounts.',
+      confirmText: 'View Admins',
+      onSubmit: async (password) => {
+        try {
+          const admins = await adminApi.getAllAdmins(username, password);
+          setAdminListPassword(password);
+          setAllAdmins(admins);
+          setShowAdminList(true);
+        } catch (error) {
+          console.error(error);
+          if (getErrorStatus(error) === 401) {
+            throw new Error('Invalid password');
+          }
+          throw new Error(getErrorMessage(error, 'Failed to load admin list'));
+        }
+      },
+    });
   };
 
   const handleDeleteAdmin = async (adminToDelete: Admin) => {
-    if (!admin) return;
+    if (!username) return;
 
-    if (adminToDelete.id === admin.id) {
+    if (adminToDelete.username === username) {
       showError('You cannot delete your own account');
       return;
     }
@@ -1164,28 +1214,68 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
       confirmText: 'Delete',
       cancelText: 'Cancel',
       variant: 'danger',
-      onConfirm: async () => {
+      onConfirm: () => {
         setConfirmationModal({ ...confirmationModal, isOpen: false });
-        const password = prompt('Enter your password to confirm deletion:');
-        if (!password) return;
+        showPasswordPrompt({
+          title: 'Confirm Password',
+          message: `Enter your password to delete "${adminToDelete.username}".`,
+          confirmText: 'Delete Admin',
+          onSubmit: async (password) => {
+            if (!username) {
+              throw new Error('Admin not found');
+            }
+            try {
+              setDeletingAdminId(adminToDelete.id);
+              await adminApi.deleteAdmin(adminToDelete.id, username, password);
+              await loadAllAdmins();
+              success('Admin account deleted successfully');
+            } catch (error) {
+              console.error(error);
+              const status = getErrorStatus(error);
+              if (status === 401) {
+                throw new Error('Invalid password');
+              }
+              if (status === 400) {
+                throw new Error('Cannot delete your own account');
+              }
+              throw new Error(getErrorMessage(error, 'Failed to delete admin account'));
+            } finally {
+              setDeletingAdminId(null);
+            }
+          },
+        });
+      },
+    });
+  };
 
+  const handleAnnouncementSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!announcementTitle.trim() || !announcementMessage.trim()) {
+      showError('Please fill in both title and message');
+      return;
+    }
+    if (!username) {
+      showError('Admin not found');
+      return;
+    }
+
+    showPasswordPrompt({
+      title: 'Send Announcement',
+      message: 'Enter your password to send this announcement to all users.',
+      confirmText: 'Send Announcement',
+      onSubmit: async (password) => {
+        setSendingAnnouncement(true);
         try {
-          setDeletingAdminId(adminToDelete.id);
-          await adminApi.deleteAdmin(adminToDelete.id, admin.username, password);
-          await loadAllAdmins();
-          success('Admin account deleted successfully');
+          await adminApi.sendAnnouncement(announcementTitle, announcementMessage, username, password);
+          success('Announcement sent to all users!');
+          setAnnouncementTitle('');
+          setAnnouncementMessage('');
+          await loadAuditLogs();
         } catch (error) {
-          const status = getErrorStatus(error);
-          if (status === 401) {
-            showError('Invalid password');
-          } else if (status === 400) {
-            showError('Cannot delete your own account');
-          } else {
-            showError(getErrorMessage(error, 'Failed to delete admin account'));
-          }
           console.error(error);
+          throw new Error(getErrorMessage(error, 'Failed to send announcement'));
         } finally {
-          setDeletingAdminId(null);
+          setSendingAnnouncement(false);
         }
       },
     });
@@ -1243,6 +1333,15 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
         variant={confirmationModal.variant}
         onConfirm={confirmationModal.onConfirm}
         onCancel={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+      />
+      <PasswordPromptModal
+        isOpen={passwordPromptConfig.isOpen}
+        title={passwordPromptConfig.title}
+        message={passwordPromptConfig.message}
+        confirmText={passwordPromptConfig.confirmText}
+        cancelText={passwordPromptConfig.cancelText}
+        onSubmit={passwordPromptConfig.onSubmit}
+        onClose={closePasswordPrompt}
       />
 
       {/* Merged Header + Navigation */}
@@ -1328,7 +1427,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                     <FiDollarSign />
                   </div>
                 </div>
-                <div className="stat-card-value">{totalBuxInCirculation}</div>
+                <div className="stat-card-value">{formatBux(totalBuxInCirculation)}</div>
                 <div className="stat-card-label">Bux in Circulation</div>
               </div>
 
@@ -1377,6 +1476,13 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                 style={{ borderBottom: overviewSubTab === 'announcement' ? '3px solid var(--primary)' : '3px solid transparent' }}
               >
                 Announcement
+              </button>
+              <button
+                className={`tab-btn ${overviewSubTab === 'ninja-logins' ? 'active' : ''}`}
+                onClick={() => setOverviewSubTab('ninja-logins')}
+                style={{ borderBottom: overviewSubTab === 'ninja-logins' ? '3px solid var(--primary)' : '3px solid transparent' }}
+              >
+                Ninja Activity
               </button>
             </div>
           </div>
@@ -1444,7 +1550,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                             <td>{txn.ninjaFirstName} {txn.ninjaLastName}</td>
                             <td><span className="badge badge-gray">{txn.type}</span></td>
                             <td style={{ color: txn.amount > 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
-                              {txn.amount > 0 ? '+' : ''}{(txn.amount)} Bux
+                              {txn.amount > 0 ? '+' : ''}{formatBux(Math.abs(txn.amount))} Bux
                             </td>
                             <td>{txn.sourceType}</td>
                             <td>{txn.note || '-'}</td>
@@ -1461,34 +1567,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
           {overviewSubTab === 'announcement' && (
             <div className="announcement-section" style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--gray-200)' }}>
               <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 600 }}>Send Announcement</h3>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                if (!announcementTitle.trim() || !announcementMessage.trim()) {
-                  showError('Please fill in both title and message');
-                  return;
-                }
-                if (!admin) {
-                  showError('Admin not found');
-                  return;
-                }
-                setSendingAnnouncement(true);
-                try {
-                  const adminPassword = prompt('Enter your admin password to send announcement:');
-                  if (!adminPassword) {
-                    setSendingAnnouncement(false);
-                    return;
-                  }
-                  await adminApi.sendAnnouncement(announcementTitle, announcementMessage, admin.username, adminPassword);
-                  success('Announcement sent to all users!');
-                  setAnnouncementTitle('');
-                  setAnnouncementMessage('');
-                  await loadAuditLogs();
-                } catch (error) {
-                  showError(getErrorMessage(error, 'Failed to send announcement'));
-                } finally {
-                  setSendingAnnouncement(false);
-                }
-              }}>
+              <form onSubmit={handleAnnouncementSubmit}>
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Title</label>
                   <input
@@ -1520,6 +1599,61 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                   {sendingAnnouncement ? 'Sending...' : 'Send Announcement'}
                 </button>
               </form>
+            </div>
+          )}
+
+          {overviewSubTab === 'ninja-logins' && (
+            <div className="ninja-logins-section">
+              <div className="activity-header">
+                <h3>Recent Ninja Logins</h3>
+                <span className="activity-count">{ninjaLoginLogs.length} login attempts</span>
+              </div>
+              <div className="data-table" style={{ marginTop: '1rem' }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Ninja</th>
+                      <th>Time</th>
+                      <th>Status</th>
+                      <th>IP Address</th>
+                      <th>Browser</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ninjaLoginLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-500)' }}>
+                          No login activity yet
+                        </td>
+                      </tr>
+                    ) : (
+                      ninjaLoginLogs.map((log) => (
+                        <tr key={log.id}>
+                          <td>
+                            <strong>{log.ninja.firstName} {log.ninja.lastName}</strong>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>@{log.ninja.username}</div>
+                          </td>
+                          <td>{new Date(log.loginTime).toLocaleString()}</td>
+                          <td>
+                            <span style={{
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              background: log.successful ? '#dcfce7' : '#fee2e2',
+                              color: log.successful ? '#166534' : '#991b1b'
+                            }}>
+                              {log.successful ? 'Success' : 'Failed'}
+                            </span>
+                          </td>
+                          <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{log.ipAddress || '-'}</td>
+                          <td style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>{log.userAgent || '-'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>
@@ -1666,7 +1800,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                     <td><span className="badge badge-gray">{ninja.currentBeltType}</span></td>
                     <td>{ninja.currentLevel}</td>
                     <td>{ninja.currentLesson}</td>
-                    <td><strong>{ninja.buxBalance.toFixed(2)}</strong></td>
+                    <td><strong>{formatBux(ninja.buxBalance)}</strong></td>
                     <td>
                       {ninja.unredeemedPurchases && ninja.unredeemedPurchases.length > 0 ? (
                         <span className="badge badge-danger">{ninja.unredeemedPurchases.length}</span>
@@ -1823,7 +1957,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                 <p style={{ margin: '1rem 0', color: 'var(--admin-text-secondary)' }}>{item.description}</p>
                 <div className="card-footer">
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <strong style={{ fontSize: '1.25rem' }}>{item.price} Bux</strong>
+                    <strong style={{ fontSize: '1.25rem' }}>{formatBux(item.price)} Bux</strong>
                     {item.available ? (
                       <span className="badge badge-success">Available</span>
                     ) : (
@@ -2422,7 +2556,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
 
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                   <span className="badge badge-success">
-                    <FiDollarSign size={12} /> {achievement.buxReward} Bux
+                    <FiDollarSign size={12} /> {formatBux(achievement.buxReward)} Bux
                   </span>
                   {achievement.manualOnly && (
                     <span className="badge badge-warning">Manual Only</span>
@@ -2552,15 +2686,15 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                   <div className="analytics-grid">
                     <div className="metric-card">
                       <div className="metric-label">Total Bux in Circulation</div>
-                      <div className="metric-value">{analytics.economyHealth.totalBuxInCirculation?.toLocaleString() || 0}</div>
+                      <div className="metric-value">{formatBux(analytics.economyHealth.totalBuxInCirculation)}</div>
                     </div>
                     <div className="metric-card">
                       <div className="metric-label">Total Earned</div>
-                      <div className="metric-value">{analytics.economyHealth.totalBuxEarned?.toLocaleString() || 0}</div>
+                      <div className="metric-value">{formatBux(analytics.economyHealth.totalBuxEarned)}</div>
                     </div>
                     <div className="metric-card">
                       <div className="metric-label">Total Spent</div>
-                      <div className="metric-value">{analytics.economyHealth.totalBuxSpent?.toLocaleString() || 0}</div>
+                      <div className="metric-value">{formatBux(analytics.economyHealth.totalBuxSpent)}</div>
                     </div>
                     <div className="metric-card">
                       <div className="metric-label">Spend/Earn Ratio</div>
@@ -2654,7 +2788,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                         </div>
                         <div className="metric-card">
                           <div className="metric-label">Avg Purchase Value</div>
-                          <div className="metric-value">{analytics.engagement.shopMetrics.averagePurchaseValue || 0} Bux</div>
+                          <div className="metric-value">{formatBux(analytics.engagement.shopMetrics.averagePurchaseValue)} Bux</div>
                         </div>
                         <div className="metric-card">
                           <div className="metric-label">Unique Shoppers (This Week)</div>
@@ -2700,7 +2834,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                             <div className="item-name">{item.itemName}</div>
                             <div className="item-stats">
                               <span>Purchases: {item.purchaseCount}</span>
-                              <span>Revenue: {item.revenue} Bux</span>
+                              <span>Revenue: {formatBux(item.revenue)} Bux</span>
                             </div>
                           </div>
                         ))}
@@ -2716,7 +2850,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                             <div className="item-name">{item.itemName}</div>
                             <div className="item-stats">
                               <span>Purchases: {item.purchaseCount}</span>
-                              <span>Revenue: {item.revenue} Bux</span>
+                              <span>Revenue: {formatBux(item.revenue)} Bux</span>
                             </div>
                           </div>
                         ))}
@@ -2739,31 +2873,31 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
             <h2>Settings</h2>
           </div>
 
-          {admin && (
+          {currentAdmin && (
             <div className="form-section">
               <h3>Current Admin Account</h3>
               <div className="form-grid">
                 <div className="form-field">
                   <label>Username</label>
-                  <input type="text" value={admin.username} disabled />
+                  <input type="text" value={currentAdmin.username} disabled />
                 </div>
                 <div className="form-field">
                   <label>Email</label>
-                  <input type="email" value={admin.email || '-'} disabled />
+                  <input type="email" value={currentAdmin.email || '-'} disabled />
                 </div>
                 <div className="form-field">
                   <label>First Name</label>
-                  <input type="text" value={admin.firstName} disabled />
+                  <input type="text" value={currentAdmin.firstName} disabled />
                 </div>
                 <div className="form-field">
                   <label>Last Name</label>
-                  <input type="text" value={admin.lastName} disabled />
+                  <input type="text" value={currentAdmin.lastName} disabled />
                 </div>
                 <div className="form-field">
                   <label>Permissions</label>
                   <input
                     type="text"
-                    value={admin.canCreateAdmins ? 'Can create admin accounts' : 'Standard admin'}
+                    value={currentAdmin.canCreateAdmins ? 'Can create admin accounts' : 'Standard admin'}
                     disabled
                   />
                 </div>
@@ -2838,7 +2972,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
             )}
           </div>
 
-          {admin && admin.canCreateAdmins && (
+          {currentAdmin && currentAdmin.canCreateAdmins && (
             <>
               <div className="form-section">
                 <div className="form-section-header">
@@ -2877,7 +3011,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                                 )}
                               </td>
                               <td>
-                                {adminItem.id !== admin?.id && (
+                                {adminItem.username !== username && (
                                   <button
                                     onClick={() => handleDeleteAdmin(adminItem)}
                                     className="btn-sm btn-delete"
@@ -2886,7 +3020,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                                     {deletingAdminId === adminItem.id ? 'Deleting...' : 'Delete'}
                                   </button>
                                 )}
-                                {adminItem.id === admin?.id && (
+                                {adminItem.username === username && (
                                   <span style={{ color: '#666', fontSize: '0.9em' }}>Current user</span>
                                 )}
                               </td>
@@ -2922,22 +3056,13 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                 </div>
 
               {isCreatingAdmin && (
-                <div className="modal-backdrop" onClick={() => { setIsCreatingAdmin(false); setAdminFormData({ username: '', email: '', password: '', firstName: '', lastName: '', currentPassword: '' }); }}>
+                <div className="modal-backdrop" onClick={() => { setIsCreatingAdmin(false); setAdminFormData({ ...ADMIN_FORM_INITIAL_STATE }); }}>
                   <div className="form-section modal" onClick={(e) => e.stopPropagation()}>
                     <div className="form-section-header">
                       <h3>Create Admin Account</h3>
                     </div>
                     <form onSubmit={handleSubmitAdmin}>
                   <div className="form-grid">
-                    <div className="form-field">
-                      <label>Your Password (for verification)</label>
-                      <input
-                        type="password"
-                        value={adminFormData.currentPassword}
-                        onChange={(e) => setAdminFormData({ ...adminFormData, currentPassword: e.target.value })}
-                        required
-                      />
-                    </div>
                     <div className="form-field">
                       <label>Username</label>
                       <input
@@ -2990,14 +3115,7 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                         type="button"
                         onClick={() => {
                           setIsCreatingAdmin(false);
-                          setAdminFormData({
-                            username: '',
-                            email: '',
-                            password: '',
-                            firstName: '',
-                            lastName: '',
-                            currentPassword: '',
-                          });
+                          setAdminFormData({ ...ADMIN_FORM_INITIAL_STATE });
                         }}
                         className="btn btn-secondary"
                       >
@@ -3030,9 +3148,9 @@ export default function AdminDashboard({ onLogout, admin }: Props) {
                   <div><strong>Belt:</strong> {selectedNinja.currentBeltType}</div>
                   <div><strong>Level:</strong> {selectedNinja.currentLevel}</div>
                   <div><strong>Lesson:</strong> {selectedNinja.currentLesson}</div>
-                  <div><strong>Total Earned:</strong> {selectedNinja.totalBuxEarned} Bux</div>
-                  <div><strong>Total Spent:</strong> {selectedNinja.totalBuxSpent} Bux</div>
-                  <div><strong>Current Balance:</strong> {selectedNinja.buxBalance.toFixed(2)} Bux</div>
+                  <div><strong>Total Earned:</strong> {formatBux(selectedNinja.totalBuxEarned)} Bux</div>
+                  <div><strong>Total Spent:</strong> {formatBux(selectedNinja.totalBuxSpent)} Bux</div>
+                  <div><strong>Current Balance:</strong> {formatBux(selectedNinja.buxBalance)} Bux</div>
                   {selectedNinja.suggestionsBanned && (
                     <div style={{ gridColumn: '1 / -1', background: '#fee2e2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #dc2626' }}>
                       <strong style={{ color: '#dc2626', fontWeight: 600 }}>Suggestions Banned</strong>

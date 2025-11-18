@@ -392,3 +392,17 @@ export interface AnalyticsSnapshot {
   engagement?: EngagementMetricsSummary;
   itemPopularity?: ItemPopularityMetrics;
 }
+
+export interface NinjaLoginLog {
+  id: number;
+  ninja: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+  loginTime: string;
+  ipAddress?: string;
+  userAgent?: string;
+  successful: boolean;
+}
