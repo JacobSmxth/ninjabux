@@ -4,6 +4,7 @@ import type { Ninja, ShopItem, Purchase } from '../types';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useLockContext } from '../context/LockContext';
 import { getBeltTheme, defaultBeltTheme } from '../utils/beltTheme';
+import { formatBux } from '../utils/format';
 import './Shop.css';
 
 interface Props {
@@ -75,7 +76,7 @@ export default function Shop({ ninjaId }: Props) {
     if (!ninja) return;
 
     if (ninja.buxBalance < price) {
-      setPurchaseMessage({ type: 'error', text: `Not enough Bux! You need ${price} but only have ${ninja.buxBalance.toFixed(2)}.` });
+      setPurchaseMessage({ type: 'error', text: `Not enough Bux! You need ${formatBux(price)} but only have ${formatBux(ninja.buxBalance)}.` });
       setTimeout(() => setPurchaseMessage(null), 5000);
       return;
     }
@@ -83,7 +84,7 @@ export default function Shop({ ninjaId }: Props) {
     setConfirmationModal({
       isOpen: true,
       title: 'Purchase Item',
-      message: `Purchase ${itemName} for ${price} Bux?`,
+      message: `Purchase ${itemName} for ${formatBux(price)} Bux?`,
       confirmText: 'Purchase',
       cancelText: 'Cancel',
       variant: 'info',
@@ -154,7 +155,7 @@ export default function Shop({ ninjaId }: Props) {
     if (!ninja) return { canPurchase: false, reason: 'Not logged in' };
     
     if (ninja.buxBalance < item.price) {
-      return { canPurchase: false, reason: `Not enough Bux! You need ${item.price} but only have ${ninja.buxBalance.toFixed(2)}.` };
+      return { canPurchase: false, reason: `Not enough Bux! You need ${formatBux(item.price)} but only have ${formatBux(ninja.buxBalance)}.` };
     }
     
     const restrictions = getPurchaseRestrictions(item);
@@ -233,7 +234,7 @@ export default function Shop({ ninjaId }: Props) {
           boxShadow: `0 12px 28px ${accentShadow}`
         }}>
           <span className="balance-label" style={{ color: beltTheme.secondary }}>Your Balance:</span>
-          <span className="balance-amount" style={{ color: beltTheme.secondary }}>{ninja.buxBalance.toFixed(2)} Bux</span>
+          <span className="balance-amount" style={{ color: beltTheme.secondary }}>{formatBux(ninja.buxBalance)} Bux</span>
           {ninja.legacyBalance !== undefined && ninja.legacyBalance > 0 && (
             <span className="balance-legacy" style={{ 
               color: beltTheme.secondary, 
@@ -241,7 +242,7 @@ export default function Shop({ ninjaId }: Props) {
               opacity: 0.9, 
               marginLeft: '0.5rem' 
             }}>
-              ({ninja.legacyBalance} Legacy)
+              ({formatBux(ninja.legacyBalance)} Legacy)
             </span>
           )}
         </div>
@@ -279,7 +280,7 @@ export default function Shop({ ninjaId }: Props) {
                 <p className="item-description">{item.description}</p>
               </div>
               <div className="item-actions">
-                <span className="item-price" style={{ color: beltTheme.accent }}>{item.price} Bux</span>
+                <span className="item-price" style={{ color: beltTheme.accent }}>{formatBux(item.price)} Bux</span>
                 <div className="purchase-button-wrapper">
                   <button
                     className={`purchase-btn ${!canPurchase ? 'disabled' : ''}`}

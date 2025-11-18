@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ProgressHistory, ProgressHistoryCorrectionRequest, BeltType } from '../types';
 import './ProgressHistoryEditModal.css';
+import { formatBux } from '../utils/format';
 
 interface Props {
   isOpen: boolean;
@@ -83,7 +84,7 @@ export default function ProgressHistoryEditModal({ isOpen, originalEntry, onClos
             <div style={{ marginTop: '0.5rem' }}>
               {originalEntry.beltType} Belt - Level {originalEntry.level}, Lesson {originalEntry.lesson}
               <br />
-              {originalEntry.buxEarned >= 0 ? '+' : ''}{originalEntry.buxEarned} Bux
+              {originalEntry.buxEarned >= 0 ? '+' : ''}{formatBux(Math.abs(originalEntry.buxEarned))} Bux
               {originalEntry.legacyDelta !== undefined && originalEntry.legacyDelta !== 0 && (
                 <>, {originalEntry.legacyDelta >= 0 ? '+' : ''}{originalEntry.legacyDelta} Legacy</>
               )}

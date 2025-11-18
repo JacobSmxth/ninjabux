@@ -4,10 +4,11 @@ import type { LeaderboardResponse, LeaderboardEntry, BadgeRarity } from '../type
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { FaCrown, FaTrophy } from 'react-icons/fa';
 import AchievementIcon from '../components/AchievementIcon';
+import { formatBux } from '../utils/format';
 import './Leaderboard.css';
 
 type TimePeriod = 'daily' | 'week' | 'month' | 'lifetime';
-type LeaderboardSection = 'earners' | 'spenders' | 'improved' | 'quiz' | 'streak';
+type LeaderboardSection = 'earners' | 'spenders' | 'improved' | 'quiz';
 
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
@@ -56,6 +57,8 @@ export default function Leaderboard() {
     topIcon?: ReactNode;
   }) => {
     const fullName = `${entry.firstName.charAt(0).toUpperCase() + entry.firstName.slice(1).toLowerCase()} ${entry.lastName.charAt(0).toUpperCase() + entry.lastName.slice(1).toLowerCase()}`;
+    const numericValue = typeof value === 'number' ? value : Number(value);
+    const displayValue = valueLabel === '$' ? `$${formatBux(numericValue)}` : value;
 
     return (
       <div className={`leaderboard-entry ${isTop ? 'top-1' : ''}`}>
@@ -80,7 +83,7 @@ export default function Leaderboard() {
         </div>
         <div className="bux-amount">
           {isTop && topIcon && <span className="badge">{topIcon}</span>}
-          {typeof value === 'number' && valueLabel === '$' ? `$${value}` : value}
+          {valueLabel === '$' ? displayValue : value}
           {valueLabel && valueLabel !== '$' && <span className="value-label">{valueLabel}</span>}
         </div>
       </div>
@@ -253,35 +256,6 @@ export default function Leaderboard() {
             </div>
           )}
 
-          {expandedSection === 'streak' && (
-            <div className="leaderboard-section expanded">
-              <div className="section-header" onClick={() => toggleSection('streak')}>
-                <h2>Streak Leaders <span className="section-subtitle">(Consecutive Sessions)</span></h2>
-                <button className="expand-toggle">
-                  <FiChevronUp size={20} />
-                </button>
-              </div>
-              <div className="leaderboard-list">
-                {leaderboard?.streakLeaders && leaderboard.streakLeaders.length > 0 ? (
-                  leaderboard.streakLeaders.map((entry: LeaderboardEntry) => (
-                    <LeaderboardEntryComponent
-                      key={entry.ninjaId}
-                      entry={entry}
-                      value={entry.totalBuxEarned}
-                      valueLabel="days"
-                      isTop={false}
-                      topIcon={null}
-                    />
-                  ))
-                ) : (
-                  <div className="empty-leaderboard">
-                    <p>{leaderboard?.message || 'No users qualify for this leaderboard'}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Default view when nothing is expanded - show grid */}
           {!expandedSection && (
             <div className="leaderboard-sections">
@@ -304,6 +278,17 @@ export default function Leaderboard() {
               </div>
 
               {(period === 'week' || period === 'daily') && (
+                <div className="leaderboard-section collapsed">
+                  <div className="section-header" onClick={() => toggleSection('improved')}>
+                    <h2>Most Improved <span className="section-subtitle">(Lessons Advanced)</span></h2>
+                    <button className="expand-toggle">
+                      <FiChevronDown size={20} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {(period === 'month' || period === 'lifetime') && (
                 <>
                   <div className="leaderboard-section collapsed">
                     <div className="section-header" onClick={() => toggleSection('improved')}>
@@ -317,15 +302,6 @@ export default function Leaderboard() {
                   <div className="leaderboard-section collapsed">
                     <div className="section-header" onClick={() => toggleSection('quiz')}>
                       <h2>Quiz Champions <span className="section-subtitle">(Correct Answers)</span></h2>
-                      <button className="expand-toggle">
-                        <FiChevronDown size={20} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="leaderboard-section collapsed">
-                    <div className="section-header" onClick={() => toggleSection('streak')}>
-                      <h2>Streak Leaders <span className="section-subtitle">(Consecutive Sessions)</span></h2>
                       <button className="expand-toggle">
                         <FiChevronDown size={20} />
                       </button>
@@ -356,7 +332,15 @@ export default function Leaderboard() {
               </div>
             )}
 
-            {(period === 'week' || period === 'daily') && (
+            {(period === 'week' || period === 'daily') && expandedSection !== 'improved' && (
+              <div className="leaderboard-section collapsed sidebar-button" onClick={() => toggleSection('improved')}>
+                <div className="section-header">
+                  <h2>Most Improved</h2>
+                </div>
+              </div>
+            )}
+
+            {(period === 'month' || period === 'lifetime') && (
               <>
                 {expandedSection !== 'improved' && (
                   <div className="leaderboard-section collapsed sidebar-button" onClick={() => toggleSection('improved')}>

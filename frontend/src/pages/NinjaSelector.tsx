@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ninjaApi } from '../services/api';
 import type { Ninja } from '../types';
 import './NinjaSelector.css';
+import { formatBux } from '../utils/format';
 
 interface Props {
   onSelectNinja: (id: number) => void;
@@ -79,7 +80,7 @@ export default function NinjaSelector({ onSelectNinja }: Props) {
                   {ninja.currentBeltType}
                 </div>
                 <h2>{ninja.firstName} {ninja.lastName}</h2>
-                <p className="ninja-balance">{ninja.buxBalance.toFixed(2)} Bux</p>
+                <p className="ninja-balance">{formatBux(ninja.buxBalance)} Bux</p>
                 <p className="ninja-progress">
                   Level {ninja.currentLevel} • Lesson {ninja.currentLesson}
                 </p>

@@ -16,6 +16,12 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
   const clientRef = useRef<Client | null>(null);
   const { showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp } = useToastContext();
 
+  const toastFunctionsRef = useRef({ showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp });
+
+  useEffect(() => {
+    toastFunctionsRef.current = { showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp };
+  }, [showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp]);
+
   useEffect(() => {
     const connect = () => {
       try {
@@ -99,7 +105,7 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
         if (onLockStatusChange) {
           onLockStatusChange(false, '');
         }
-        showToast(notification.message, 'info', notification.title);
+        toastFunctionsRef.current.showToast(notification.message, 'info', notification.title);
         return;
       }
 
@@ -124,25 +130,25 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
 
       switch (toastType) {
         case 'lesson-complete':
-          lessonComplete(notification.message, notification.title);
+          toastFunctionsRef.current.lessonComplete(notification.message, notification.title);
           break;
         case 'level-up':
-          levelUp(notification.message, notification.title);
+          toastFunctionsRef.current.levelUp(notification.message, notification.title);
           break;
         case 'achievement':
-          achievement(notification.message, notification.title);
+          toastFunctionsRef.current.achievement(notification.message, notification.title);
           break;
         case 'announcement':
-          announcement(notification.message, notification.title);
+          toastFunctionsRef.current.announcement(notification.message, notification.title);
           break;
         case 'ninja-level-up':
-          ninjaLevelUp(notification.message, notification.title);
+          toastFunctionsRef.current.ninjaLevelUp(notification.message, notification.title);
           break;
         case 'ninja-belt-up':
-          ninjaBeltUp(notification.message, notification.title);
+          toastFunctionsRef.current.ninjaBeltUp(notification.message, notification.title);
           break;
         default:
-          showToast(notification.message, 'info', notification.title);
+          toastFunctionsRef.current.showToast(notification.message, 'info', notification.title);
       }
     };
 
@@ -154,5 +160,5 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
         clientRef.current.deactivate();
       }
     };
-  }, [ninjaId, showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp, onLockStatusChange]);
+  }, [ninjaId, onLockStatusChange]);
 }

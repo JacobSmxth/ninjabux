@@ -4,6 +4,7 @@ import type { AchievementProgress, AchievementCategory } from '../types';
 import { FiAward, FiLock, FiFilter, FiDollarSign } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import AchievementIcon from '../components/AchievementIcon';
+import { formatBux } from '../utils/format';
 import './AchievementGallery.css';
 
 interface Props {
@@ -42,15 +43,13 @@ export default function AchievementGallery({ ninjaId }: Props) {
   const loadAchievements = useCallback(async () => {
     try {
       setLoading(true);
-      // admin can see hidden achievements, regular users can't
       const isAdmin = !!localStorage.getItem('adminToken') || !!localStorage.getItem('adminUsername');
       const data = await achievementApi.getNinjaAchievements(ninjaId, isAdmin);
-      
-      // hide locked achievements unless you're admin
-      const filtered = isAdmin 
-        ? data 
+
+      const filtered = isAdmin
+        ? data
         : data.filter(ap => !ap.achievement.hidden || ap.unlocked);
-      
+
       setAchievements(filtered);
       setError('');
     } catch (error) {
@@ -137,7 +136,7 @@ export default function AchievementGallery({ ninjaId }: Props) {
             <div className="stat-label">Unlocked</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">{stats.totalBux}</div>
+            <div className="stat-value">{formatBux(stats.totalBux)}</div>
             <div className="stat-label">Bux Earned</div>
           </div>
           <div className="stat-card">
@@ -195,7 +194,7 @@ export default function AchievementGallery({ ninjaId }: Props) {
               <div className="achievement-footer">
                 {progress.achievement.buxReward > 0 && (
                   <div className="achievement-reward-badge">
-                    <FiDollarSign style={{ marginRight: '0.25rem' }} /> {progress.achievement.buxReward} Bux
+                    <FiDollarSign style={{ marginRight: '0.25rem' }} /> {formatBux(progress.achievement.buxReward)} Bux
                   </div>
                 )}
                 <div className={`rarity-badge rarity-${progress.achievement.rarity}`}>

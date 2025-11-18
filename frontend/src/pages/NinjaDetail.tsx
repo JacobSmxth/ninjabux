@@ -7,6 +7,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import ProgressHistoryEditModal from '../components/ProgressHistoryEditModal';
 import AchievementIcon from '../components/AchievementIcon';
 import './NinjaDetail.css';
+import { formatBux } from '../utils/format';
 
 export default function NinjaDetail() {
   const { id } = useParams<{ id: string }>();
@@ -408,15 +409,15 @@ export default function NinjaDetail() {
               </div>
               <div className="info-item">
                 <span className="info-label">Total Earned:</span>
-                <span className="info-value">{ninja.totalBuxEarned} Bux</span>
+                <span className="info-value">{formatBux(ninja.totalBuxEarned)} Bux</span>
               </div>
               <div className="info-item">
                 <span className="info-label">Total Spent:</span>
-                <span className="info-value">{ninja.totalBuxSpent} Bux</span>
+                <span className="info-value">{formatBux(ninja.totalBuxSpent)} Bux</span>
               </div>
               <div className="info-item highlight">
                 <span className="info-label">Current Balance:</span>
-                <span className="info-value balance">{ninja.buxBalance.toFixed(2)} Bux</span>
+                <span className="info-value balance">{formatBux(ninja.buxBalance)} Bux</span>
               </div>
               {ninja.legacyBalance !== undefined && ninja.legacyBalance > 0 && (
                 <div className="info-item highlight" style={{ background: '#fef3c7', border: '2px solid #f59e0b' }}>
@@ -705,7 +706,7 @@ export default function NinjaDetail() {
                       </small>
                     </div>
                     <div className="purchase-meta">
-                      <span className="purchase-price">{purchase.pricePaid} Bux</span>
+                      <span className="purchase-price">{formatBux(purchase.pricePaid)} Bux</span>
                       {purchase.redeemed && <span className="redeemed-badge">✓ Redeemed</span>}
                     </div>
                   </div>
@@ -800,7 +801,7 @@ export default function NinjaDetail() {
                               <span className="earning-type">{history.earningType.replace(/_/g, ' ')}</span>
                               {history.buxEarned !== 0 && (
                                 <span className="bux-earned" style={{ color: history.buxEarned >= 0 ? '#059669' : '#dc2626' }}>
-                                  {history.buxEarned >= 0 ? '+' : ''}{history.buxEarned} Bux
+                                {history.buxEarned >= 0 ? '+' : ''}{formatBux(Math.abs(history.buxEarned))} Bux
                                 </span>
                               )}
                               {history.legacyDelta !== undefined && history.legacyDelta !== 0 && (
@@ -839,7 +840,7 @@ export default function NinjaDetail() {
                             <div className="history-corrections">
                               {corrections.map(correction => (
                                 <div key={correction.id} className="history-correction-item">
-                                  <strong>Correction:</strong> {correction.buxEarned >= 0 ? '+' : ''}{correction.buxEarned} Bux
+                                  <strong>Correction:</strong> {correction.buxEarned >= 0 ? '+' : ''}{formatBux(Math.abs(correction.buxEarned))} Bux
                                   {correction.legacyDelta !== undefined && correction.legacyDelta !== 0 && (
                                     <span>, {correction.legacyDelta >= 0 ? '+' : ''}{correction.legacyDelta} Legacy</span>
                                   )}

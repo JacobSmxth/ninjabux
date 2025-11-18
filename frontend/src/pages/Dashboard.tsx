@@ -6,6 +6,7 @@ import { FiAward, FiHelpCircle, FiDollarSign } from 'react-icons/fi';
 import { useLockContext } from '../context/LockContext';
 import AchievementIcon from '../components/AchievementIcon';
 import { getBeltTheme, defaultBeltTheme } from '../utils/beltTheme';
+import { formatBux } from '../utils/format';
 import './Dashboard.css';
 
 
@@ -143,7 +144,7 @@ export default function Dashboard({ ninjaId }: Props) {
             color: beltTheme.secondary
           }}>
             <div className="balance-label">Balance</div>
-            <div className="balance-amount">{ninja.buxBalance} Bux</div>
+            <div className="balance-amount">{formatBux(ninja.buxBalance)} Bux</div>
             {ninja.legacyBalance !== undefined && ninja.legacyBalance > 0 && (
               <div className="balance-legacy" style={{ fontSize: '0.9rem', opacity: 0.9, marginTop: '0.25rem' }}>
                 {ninja.legacyBalance} Legacy
@@ -179,7 +180,7 @@ export default function Dashboard({ ninjaId }: Props) {
                   <p>{progress.achievement.description}</p>
                   {progress.achievement.buxReward > 0 && (
                     <div className="achievement-reward" style={{ color: '#000000' }}>
-                      <FiDollarSign style={{ marginRight: '0.25rem' }} /> {progress.achievement.buxReward} Bux
+                      <FiDollarSign style={{ marginRight: '0.25rem' }} /> {formatBux(progress.achievement.buxReward)} Bux
                     </div>
                   )}
                 </div>
@@ -212,7 +213,7 @@ export default function Dashboard({ ninjaId }: Props) {
                     </span>
                   </div>
                   <div className="timeline-details">
-                    <span className="timeline-bux" style={{ color: entryColor }}>+{entry.buxEarned} Bux</span>
+                    <span className="timeline-bux" style={{ color: entryColor }}>+{formatBux(entry.buxEarned)} Bux</span>
                     {entry.earningType === 'LEVEL_UP' && (
                       <span className="timeline-progress">
                         {entry.beltType} Belt - Level {entry.level}, Lesson {entry.lesson}
@@ -234,7 +235,7 @@ export default function Dashboard({ ninjaId }: Props) {
               <div key={purchase.id} className="purchase-card" style={{ borderColor: beltTheme.primary }}>
                 <h3>{purchase.itemName}</h3>
                 <p className="purchase-description">{purchase.itemDescription}</p>
-                <p className="purchase-price" style={{ color: beltTheme.primary }}>Paid: {purchase.pricePaid} Bux</p>
+                <p className="purchase-price" style={{ color: beltTheme.primary }}>Paid: {formatBux(purchase.pricePaid)} Bux</p>
                 <p className="purchase-date">
                   Purchased: {new Date(purchase.purchaseDate).toLocaleDateString()}
                 </p>
@@ -260,7 +261,7 @@ export default function Dashboard({ ninjaId }: Props) {
               <div key={purchase.id} className="purchase-card redeemed-purchase" style={{ borderColor: beltTheme.primary, opacity: 0.7 }}>
                 <h3>{purchase.itemName}</h3>
                 <p className="purchase-description">{purchase.itemDescription}</p>
-                <p className="purchase-price" style={{ color: beltTheme.primary }}>Paid: {purchase.pricePaid} Bux</p>
+                <p className="purchase-price" style={{ color: beltTheme.primary }}>Paid: {formatBux(purchase.pricePaid)} Bux</p>
                 <p className="purchase-date">
                   Purchased: {new Date(purchase.purchaseDate).toLocaleDateString()}
                   {purchase.redeemedDate && (
