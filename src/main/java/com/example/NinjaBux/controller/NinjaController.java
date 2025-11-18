@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/ninjas")
 public class NinjaController {
+
+  private static final Logger logger = LoggerFactory.getLogger(NinjaController.class);
 
   @Autowired private NinjaProgressService ninjaProgressService;
 
@@ -287,8 +291,7 @@ public class NinjaController {
       return ResponseEntity.status(HttpStatus.NOT_FOUND)
           .body(java.util.Map.of("message", e.getMessage()));
     } catch (RuntimeException e) {
-      System.err.println("Error locking account: " + e.getMessage());
-      e.printStackTrace();
+      logger.error("Error locking account: {}", e.getMessage(), e);
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(
               java.util.Map.of(
@@ -314,8 +317,7 @@ public class NinjaController {
       return ResponseEntity.status(HttpStatus.NOT_FOUND)
           .body(java.util.Map.of("message", e.getMessage()));
     } catch (RuntimeException e) {
-      System.err.println("Error unlocking account: " + e.getMessage());
-      e.printStackTrace();
+      logger.error("Error unlocking account: {}", e.getMessage(), e);
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(
               java.util.Map.of(

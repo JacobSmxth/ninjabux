@@ -15,12 +15,19 @@ import com.example.NinjaBux.repository.QuestionAnswerRepository;
 import com.example.NinjaBux.repository.AchievementRepository;
 import com.example.NinjaBux.domain.Achievement;
 import com.example.NinjaBux.domain.enums.AchievementCategory;
+import com.example.NinjaBux.exception.NinjaNotFoundException;
+import com.example.NinjaBux.exception.QuestionAlreadyAnsweredException;
+import com.example.NinjaBux.exception.QuestionNotFoundException;
+import com.example.NinjaBux.exception.SuggestionNotFoundException;
 import com.example.NinjaBux.service.AchievementService;
+import com.example.NinjaBux.util.AdminUtils;
+import com.example.NinjaBux.util.DateUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +35,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class BigQuestionService {
+
+    private static final Logger logger = LoggerFactory.getLogger(BigQuestionService.class);
 
     @Autowired
     private BigQuestionRepository bigQuestionRepository;
@@ -59,13 +68,13 @@ public class BigQuestionService {
     @Transactional
     public QuestionAnswer submitAnswer(Long questionId, AnswerBigQuestionRequest request) {
         BigQuestion question = bigQuestionRepository.findById(questionId)
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+                .orElseThrow(() -> new QuestionNotFoundException(questionId));
 
         Ninja ninja = ninjaRepository.findById(request.getNinjaId())
-                .orElseThrow(() -> new RuntimeException("Ninja not found"));
+                .orElseThrow(() -> new NinjaNotFoundException(request.getNinjaId()));
 
         if (questionAnswerRepository.existsByQuestionAndNinja(question, ninja)) {
-            throw new RuntimeException("Question already answered");
+            throw new QuestionAlreadyAnsweredException("Question already answered");
         }
 
         boolean isCorrect = checkAnswer(question, request.getAnswer());
@@ -116,13 +125,12 @@ public class BigQuestionService {
     public BigQuestion createQuestion(CreateBigQuestionRequest request, String adminUsername) {
         BigQuestion question = new BigQuestion();
         
-        // set question date (use provided date or today) and ensure its monday
         LocalDate questionDate = request.getQuestionDate() != null ? request.getQuestionDate() : LocalDate.now();
-        LocalDate mondayDate = getWeekStart(questionDate);
+        LocalDate mondayDate = DateUtils.getWeekStart(questionDate);
         question.setQuestionDate(mondayDate);
-        
-        LocalDate weekStart = getWeekStart(mondayDate);
-        LocalDate weekEnd = getWeekEnd(mondayDate);
+
+        LocalDate weekStart = DateUtils.getWeekStart(mondayDate);
+        LocalDate weekEnd = DateUtils.getWeekEnd(mondayDate);
         question.setWeekStartDate(weekStart);
         question.setWeekEndDate(weekEnd);
         
@@ -144,10 +152,10 @@ public class BigQuestionService {
         if (request.getSuggestionId() != null) {
             try {
                 BigQuestion suggestion = bigQuestionRepository.findById(request.getSuggestionId())
-                        .orElseThrow(() -> new RuntimeException("Suggestion not found"));
+                        .orElseThrow(() -> new SuggestionNotFoundException("Suggestion not found"));
                 
                 suggestion.setStatus(BigQuestion.QuestionStatus.APPROVED);
-                suggestion.setApprovedByAdmin(adminUsername != null ? adminUsername : "admin");
+                suggestion.setApprovedByAdmin(AdminUtils.getAdminUsername(adminUsername));
                 suggestion.setActive(false);
                 bigQuestionRepository.save(suggestion);
 
@@ -178,18 +186,17 @@ public class BigQuestionService {
                             achievementService.awardAchievement(
                                 suggestion.getSuggestedByNinjaId(),
                                 suggestionAchievement.get().getId(),
-                                adminUsername != null ? adminUsername : "admin"
+                                AdminUtils.getAdminUsername(adminUsername)
                             );
                         } else {
-                            System.out.println("No achievement found for suggestion approval. Searched for achievements containing: suggestion, question, creator, approved");
+                            logger.warn("No achievement found for suggestion approval. Searched for achievements containing: suggestion, question, creator, approved");
                         }
                     } catch (Exception e) {
-                        System.err.println("Failed to award achievement for suggestion: " + e.getMessage());
-                        e.printStackTrace();
+                        logger.error("Failed to award achievement for suggestion: {}", e.getMessage(), e);
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Failed to approve suggestion: " + e.getMessage());
+                logger.error("Failed to approve suggestion: {}", e.getMessage(), e);
             }
         }
 
@@ -199,14 +206,14 @@ public class BigQuestionService {
     @Transactional
     public BigQuestion updateQuestion(Long id, CreateBigQuestionRequest request) {
         BigQuestion question = bigQuestionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+                .orElseThrow(() -> new QuestionNotFoundException(id));
 
         LocalDate questionDate = request.getQuestionDate() != null ? request.getQuestionDate() : LocalDate.now();
-        LocalDate mondayDate = getWeekStart(questionDate);
+        LocalDate mondayDate = DateUtils.getWeekStart(questionDate);
         question.setQuestionDate(mondayDate);
-        
-        LocalDate weekStart = getWeekStart(mondayDate);
-        LocalDate weekEnd = getWeekEnd(mondayDate);
+
+        LocalDate weekStart = DateUtils.getWeekStart(mondayDate);
+        LocalDate weekEnd = DateUtils.getWeekEnd(mondayDate);
         question.setWeekStartDate(weekStart);
         question.setWeekEndDate(weekEnd);
         
@@ -229,7 +236,7 @@ public class BigQuestionService {
     @Transactional
     public void deleteQuestion(Long id) {
         BigQuestion question = bigQuestionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+                .orElseThrow(() -> new QuestionNotFoundException(id));
         question.setActive(false);
         bigQuestionRepository.save(question);
     }
@@ -237,7 +244,7 @@ public class BigQuestionService {
     @Transactional
     public void restoreQuestion(Long id) {
         BigQuestion question = bigQuestionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+                .orElseThrow(() -> new QuestionNotFoundException(id));
         question.setActive(true);
         bigQuestionRepository.save(question);
     }
@@ -257,15 +264,9 @@ public class BigQuestionService {
 
     public BigQuestion getQuestionById(Long id) {
         return bigQuestionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+                .orElseThrow(() -> new QuestionNotFoundException(id));
     }
 
-    private LocalDate getWeekStart(LocalDate date) {
-        return date.with(DayOfWeek.MONDAY);
-    }
-    private LocalDate getWeekEnd(LocalDate date) {
-        return date.with(DayOfWeek.SUNDAY);
-    }
 
     public BigQuestionResponse getThisWeeksQuestion(Long ninjaId) {
         LocalDate today = LocalDate.now();
@@ -278,7 +279,7 @@ public class BigQuestionService {
 
         BigQuestion question = questionOpt.get();
         Ninja ninja = ninjaRepository.findById(ninjaId)
-                .orElseThrow(() -> new RuntimeException("Ninja not found"));
+                .orElseThrow(() -> new NinjaNotFoundException(ninjaId));
 
         Optional<QuestionAnswer> answerOpt = questionAnswerRepository.findByQuestionAndNinja(question, ninja);
         boolean hasAnswered = answerOpt.isPresent();
@@ -302,9 +303,9 @@ public class BigQuestionService {
     @Transactional
     public BigQuestion suggestQuestion(SuggestQuestionRequest request) {
         BigQuestion question = new BigQuestion();
-        
+
         LocalDate today = LocalDate.now();
-        LocalDate mondayDate = getWeekStart(today);
+        LocalDate mondayDate = DateUtils.getWeekStart(today);
         question.setQuestionDate(mondayDate);
         
         question.setQuestionText(request.getQuestionText());
@@ -358,16 +359,16 @@ public class BigQuestionService {
     @Transactional
     public BigQuestion approveQuestion(Long id, String approvedBy) {
         BigQuestion question = bigQuestionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+                .orElseThrow(() -> new QuestionNotFoundException(id));
 
         question.setStatus(BigQuestion.QuestionStatus.APPROVED);
         question.setApprovedByAdmin(approvedBy);
 
         LocalDate questionDate = LocalDate.now().plusWeeks(1);
-        LocalDate mondayDate = getWeekStart(questionDate);
+        LocalDate mondayDate = DateUtils.getWeekStart(questionDate);
         question.setQuestionDate(mondayDate);
-        question.setWeekStartDate(getWeekStart(mondayDate));
-        question.setWeekEndDate(getWeekEnd(mondayDate));
+        question.setWeekStartDate(DateUtils.getWeekStart(mondayDate));
+        question.setWeekEndDate(DateUtils.getWeekEnd(mondayDate));
 
         return bigQuestionRepository.save(question);
     }
@@ -375,7 +376,7 @@ public class BigQuestionService {
     @Transactional
     public BigQuestion rejectQuestion(Long id, String rejectedBy, String reason) {
         BigQuestion question = bigQuestionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+                .orElseThrow(() -> new QuestionNotFoundException(id));
 
         question.setStatus(BigQuestion.QuestionStatus.REJECTED);
         question.setApprovedByAdmin(rejectedBy);
@@ -391,7 +392,7 @@ public class BigQuestionService {
                     reason
                 );
             } catch (Exception e) {
-                System.err.println("Failed to send rejection notification: " + e.getMessage());
+                logger.error("Failed to send rejection notification: {}", e.getMessage(), e);
             }
         }
 

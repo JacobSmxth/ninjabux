@@ -9,11 +9,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AnalyticsService {
+
+  private static final Logger logger = LoggerFactory.getLogger(AnalyticsService.class);
 
   @Autowired private NinjaRepository ninjaRepository;
 
@@ -59,32 +63,28 @@ public class AnalyticsService {
     try {
       response.setStallDetection(calculateStallDetection());
     } catch (Exception e) {
-      System.err.println("Error calculating stall detection: " + e.getMessage());
-      e.printStackTrace();
+      logger.error("Error calculating stall detection: {}", e.getMessage(), e);
       response.setStallDetection(new AnalyticsResponse.StallDetectionMetrics());
     }
 
     try {
       response.setEconomyHealth(calculateEconomyHealth());
     } catch (Exception e) {
-      System.err.println("Error calculating economy health: " + e.getMessage());
-      e.printStackTrace();
+      logger.error("Error calculating economy health: {}", e.getMessage(), e);
       response.setEconomyHealth(new AnalyticsResponse.EconomyHealthMetrics());
     }
 
     try {
       response.setEngagement(calculateEngagement());
     } catch (Exception e) {
-      System.err.println("Error calculating engagement: " + e.getMessage());
-      e.printStackTrace();
+      logger.error("Error calculating engagement: {}", e.getMessage(), e);
       response.setEngagement(new AnalyticsResponse.EngagementMetrics());
     }
 
     try {
       response.setItemPopularity(calculateItemPopularity());
     } catch (Exception e) {
-      System.err.println("Error calculating item popularity: " + e.getMessage());
-      e.printStackTrace();
+      logger.error("Error calculating item popularity: {}", e.getMessage(), e);
       response.setItemPopularity(new AnalyticsResponse.ItemPopularityMetrics());
     }
 

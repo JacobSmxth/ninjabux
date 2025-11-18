@@ -11,6 +11,7 @@ import com.example.NinjaBux.exception.NinjaNotFoundException;
 import com.example.NinjaBux.repository.LedgerTxnRepository;
 import com.example.NinjaBux.repository.LegacyLedgerTxnRepository;
 import com.example.NinjaBux.repository.NinjaRepository;
+import com.example.NinjaBux.util.AdminUtils;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,13 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class LedgerService {
+public class LedgerService extends NinjaServiceBase {
 
   @Autowired private LedgerTxnRepository ledgerTxnRepository;
 
   @Autowired private LegacyLedgerTxnRepository legacyLedgerTxnRepository;
-
-  @Autowired private NinjaRepository ninjaRepository;
 
   public int getBuxBalance(Long ninjaId) {
     Ninja ninja = findNinja(ninjaId);
@@ -169,7 +168,7 @@ public class LedgerService {
                 ? note
                 : String.format(
                     "Admin adjustment by %s: %+d Bux",
-                    adminUsername != null ? adminUsername : "admin", buxAmount));
+                    AdminUtils.getAdminUsername(adminUsername), buxAmount));
     return ledgerTxnRepository.save(txn);
   }
 
@@ -263,9 +262,5 @@ public class LedgerService {
                 : String.format(
                     "Admin Legacy adjustment by %s: %+d Legacy", adminUsername, legacyAmount));
     return legacyLedgerTxnRepository.save(txn);
-  }
-
-  private Ninja findNinja(Long ninjaId) {
-    return ninjaRepository.findById(ninjaId).orElseThrow(() -> new NinjaNotFoundException(ninjaId));
   }
 }

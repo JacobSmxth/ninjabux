@@ -2,12 +2,15 @@ package com.example.NinjaBux.service;
 
 import com.example.NinjaBux.domain.AdminAuditLog;
 import com.example.NinjaBux.repository.AdminAuditLogRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class AdminAuditService {
+    private static final Logger logger = LoggerFactory.getLogger(AdminAuditService.class);
     private final AdminAuditLogRepository auditLogRepository;
 
     public AdminAuditService(AdminAuditLogRepository auditLogRepository) {
@@ -19,9 +22,7 @@ public class AdminAuditService {
             AdminAuditLog log = new AdminAuditLog(adminUsername, action, details);
             auditLogRepository.save(log);
         } catch (Exception e) {
-            // dont fail app if audit logging fails
-            System.err.println("Error saving audit log: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error saving audit log: {}", e.getMessage(), e);
         }
     }
 
@@ -30,9 +31,7 @@ public class AdminAuditService {
             AdminAuditLog log = new AdminAuditLog(adminUsername, action, details, targetNinjaId, targetNinjaName);
             auditLogRepository.save(log);
         } catch (Exception e) {
-            // gotta ctach em all
-            System.err.println("Error saving audit log: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error saving audit log: {}", e.getMessage(), e);
         }
     }
 

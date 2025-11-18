@@ -312,32 +312,22 @@ public class NinjaLeaderboardService {
   }
 
   private List<LeaderboardEntry> buildTopEarners(List<NinjaLedgerView> views, int topN) {
-    List<NinjaLedgerView> sorted =
-        views.stream()
-            .filter(view -> view.getEarned() > 0)
-            .sorted(Comparator.comparingInt(NinjaLedgerView::getEarned).reversed())
-            .limit(topN)
-            .collect(Collectors.toList());
-
-    List<LeaderboardEntry> entries = new ArrayList<>();
-    for (int i = 0; i < sorted.size(); i++) {
-      NinjaLedgerView view = sorted.get(i);
-      LeaderboardEntry entry =
-          createLeaderboardEntry(view.getNinja(), view.getEarned(), view.getSpent(), i + 1);
-      populateAchievements(entry);
-      if (i == 0) {
-        entry.setTopEarner(true);
-      }
-      entries.add(entry);
-    }
-    return entries;
+    return buildLeaderboard(views, topN, NinjaLedgerView::getEarned, true);
   }
 
   private List<LeaderboardEntry> buildTopSpenders(List<NinjaLedgerView> views, int topN) {
+    return buildLeaderboard(views, topN, NinjaLedgerView::getSpent, false);
+  }
+
+  private List<LeaderboardEntry> buildLeaderboard(
+      List<NinjaLedgerView> views,
+      int topN,
+      java.util.function.ToIntFunction<NinjaLedgerView> metricExtractor,
+      boolean isEarnerBoard) {
     List<NinjaLedgerView> sorted =
         views.stream()
-            .filter(view -> view.getSpent() > 0)
-            .sorted(Comparator.comparingInt(NinjaLedgerView::getSpent).reversed())
+            .filter(view -> metricExtractor.applyAsInt(view) > 0)
+            .sorted(Comparator.comparingInt(metricExtractor).reversed())
             .limit(topN)
             .collect(Collectors.toList());
 
@@ -348,7 +338,11 @@ public class NinjaLeaderboardService {
           createLeaderboardEntry(view.getNinja(), view.getEarned(), view.getSpent(), i + 1);
       populateAchievements(entry);
       if (i == 0) {
-        entry.setTopSpender(true);
+        if (isEarnerBoard) {
+          entry.setTopEarner(true);
+        } else {
+          entry.setTopSpender(true);
+        }
       }
       entries.add(entry);
     }

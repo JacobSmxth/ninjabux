@@ -10,6 +10,7 @@ import com.example.NinjaBux.repository.NinjaRepository;
 import com.example.NinjaBux.repository.ProgressHistoryRepository;
 import com.example.NinjaBux.repository.PurchaseRepository;
 import com.example.NinjaBux.repository.QuestionAnswerRepository;
+import com.example.NinjaBux.util.AdminUtils;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,9 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class NinjaAdminService {
-
-  @Autowired private NinjaRepository ninjaRepository;
+public class NinjaAdminService extends NinjaServiceBase {
 
   @Autowired private QuestionAnswerRepository questionAnswerRepository;
 
@@ -102,7 +101,7 @@ public class NinjaAdminService {
             : String.format("Admin award: %d Bux", amount);
 
     ledgerService.recordAdminAdjustment(
-        ninjaId, amount, noteText, adminUsername != null ? adminUsername : "admin");
+        ninjaId, amount, noteText, AdminUtils.getAdminUsername(adminUsername));
 
     ProgressHistory history =
         new ProgressHistory(
@@ -113,7 +112,7 @@ public class NinjaAdminService {
             amount,
             ProgressHistory.EarningType.ADMIN_AWARD);
     history.setNotes(noteText);
-    history.setAdminUsername(adminUsername != null ? adminUsername : "admin");
+    history.setAdminUsername(AdminUtils.getAdminUsername(adminUsername));
     progressHistoryRepository.save(history);
 
     return ninjaRepository.findById(ninjaId).orElse(ninja);
@@ -138,7 +137,7 @@ public class NinjaAdminService {
             : String.format("Admin deduction: %d Bux", amount);
 
     ledgerService.recordAdminAdjustment(
-        ninjaId, -amount, noteText, adminUsername != null ? adminUsername : "admin");
+        ninjaId, -amount, noteText, AdminUtils.getAdminUsername(adminUsername));
 
     return ninjaRepository.findById(ninjaId).orElse(ninja);
   }
@@ -184,9 +183,5 @@ public class NinjaAdminService {
     }
 
     return ninja;
-  }
-
-  private Ninja findNinja(Long ninjaId) {
-    return ninjaRepository.findById(ninjaId).orElseThrow(() -> new NinjaNotFoundException(ninjaId));
   }
 }

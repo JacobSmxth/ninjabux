@@ -10,11 +10,13 @@ import com.example.NinjaBux.repository.AchievementRepository;
 import com.example.NinjaBux.repository.AdminRepository;
 import com.example.NinjaBux.repository.BigQuestionRepository;
 import com.example.NinjaBux.repository.ShopItemRepository;
+import com.example.NinjaBux.util.DateUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -24,6 +26,8 @@ import java.util.List;
 // seeds the database when it gets deleted, because nobody wants to manually set up shop items again
 @Component
 public class DataInitializer implements CommandLineRunner {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
 
     @Autowired
     private ShopItemRepository shopItemRepository;
@@ -362,20 +366,19 @@ public class DataInitializer implements CommandLineRunner {
                             achievementService.checkAndUnlockAchievements(ninja.getId());
                         }
                     } catch (Exception e) {
-                        System.err.println("Error checking veteran achievement for ninja " + ninja.getId() + ": " + e.getMessage());
+                        logger.error("Error checking veteran achievement for ninja {}: {}", ninja.getId(), e.getMessage(), e);
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error awarding veteran achievements: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error awarding veteran achievements: {}", e.getMessage(), e);
         }
     }
 
     private void initializeQuestions() {
         LocalDate today = LocalDate.now();
-        LocalDate weekStart = getWeekStart(today);
-        LocalDate weekEnd = getWeekEnd(today);
+        LocalDate weekStart = DateUtils.getWeekStart(today);
+        LocalDate weekEnd = DateUtils.getWeekEnd(today);
 
         BigQuestion sampleQuestion = new BigQuestion();
         sampleQuestion.setQuestionDate(weekStart);
@@ -395,11 +398,4 @@ public class DataInitializer implements CommandLineRunner {
         bigQuestionRepository.save(sampleQuestion);
     }
 
-    private LocalDate getWeekStart(LocalDate date) {
-        return date.with(DayOfWeek.MONDAY);
-    }
-
-    private LocalDate getWeekEnd(LocalDate date) {
-        return date.with(DayOfWeek.SUNDAY);
-    }
 }

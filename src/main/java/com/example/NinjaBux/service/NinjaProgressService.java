@@ -15,9 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class NinjaProgressService {
-
-  @Autowired private NinjaRepository ninjaRepository;
+public class NinjaProgressService extends NinjaServiceBase {
 
   @Autowired private ProgressHistoryRepository progressHistoryRepository;
 
@@ -350,7 +348,4 @@ public class NinjaProgressService {
     }
   }
 
-  private Ninja findNinja(Long ninjaId) {
-    return ninjaRepository.findById(ninjaId).orElseThrow(() -> new NinjaNotFoundException(ninjaId));
-  }
 }

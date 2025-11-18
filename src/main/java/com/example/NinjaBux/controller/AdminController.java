@@ -4,12 +4,16 @@ import com.example.NinjaBux.domain.Admin;
 import com.example.NinjaBux.domain.AdminAuditLog;
 import com.example.NinjaBux.dto.AdminLoginRequest;
 import com.example.NinjaBux.dto.AdminResponse;
+import com.example.NinjaBux.dto.AuthResponse;
 import com.example.NinjaBux.dto.CreateAdminRequest;
 import com.example.NinjaBux.dto.CreateAdminByAdminRequest;
 import com.example.NinjaBux.dto.ChangePasswordRequest;
+import com.example.NinjaBux.security.JwtUtil;
 import com.example.NinjaBux.service.AdminService;
 import com.example.NinjaBux.service.AdminAuditService;
 import com.example.NinjaBux.service.NotificationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +27,19 @@ import java.util.Optional;
 @RequestMapping("/api/admin")
 public class AdminController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
+
     @Autowired
     private AdminService adminService;
 
-    @Autowired(required = false)
+    @Autowired
     private AdminAuditService auditService;
 
     @Autowired(required = false)
     private NotificationService notificationService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @GetMapping("/setup-needed")
     public ResponseEntity<Boolean> setupNeeded() {
@@ -84,13 +93,11 @@ public class AdminController {
                 request.getLastName(),
                 false
             );
-            if (auditService != null) {
-                try {
-                    auditService.log(request.getCurrentAdminUsername(), "CREATE_ADMIN", 
-                        "Created admin: " + request.getUsername());
-                } catch (Exception e) {
-                    System.err.println("Error logging admin creation: " + e.getMessage());
-                }
+            try {
+                auditService.log(request.getCurrentAdminUsername(), "CREATE_ADMIN",
+                    "Created admin: " + request.getUsername());
+            } catch (Exception e) {
+                logger.error("Error logging admin creation: {}", e.getMessage(), e);
             }
             return ResponseEntity.status(HttpStatus.CREATED).body(new AdminResponse(admin));
         } catch (Exception e) {
@@ -108,12 +115,10 @@ public class AdminController {
         );
 
         if (success) {
-            if (auditService != null) {
-                try {
+            try {
                     auditService.log(username, "CHANGE_PASSWORD", "Password changed");
-                } catch (Exception e) {
-                    System.err.println("Error logging password change: " + e.getMessage());
-                }
+            } catch (Exception e) {
+                logger.error("Error logging password change: {}", e.getMessage(), e);
             }
             return ResponseEntity.ok().build();
         } else {
@@ -122,28 +127,33 @@ public class AdminController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AdminResponse> login(@RequestBody AdminLoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@RequestBody AdminLoginRequest request) {
         try {
             Optional<Admin> admin = adminService.authenticate(request.getUsername(), request.getPassword());
 
             if (admin.isPresent()) {
-                if (auditService != null) {
-                    try {
-                        auditService.log(request.getUsername(), "LOGIN", "Admin logged in");
-                    } catch (Exception e) {
-                        System.err.println("Error logging admin login: " + e.getMessage());
-                        e.printStackTrace();
-                    }
+                try {
+                    auditService.log(request.getUsername(), "LOGIN", "Admin logged in");
+                } catch (Exception e) {
+                    logger.error("Error logging admin login: {}", e.getMessage(), e);
                 }
-                
-                AdminResponse response = new AdminResponse(admin.get());
+
+                Admin adminUser = admin.get();
+                String token = jwtUtil.generateAdminToken(adminUser.getId(), adminUser.getUsername());
+
+                AuthResponse response = new AuthResponse(
+                    token,
+                    "ADMIN",
+                    adminUser.getId(),
+                    adminUser.getUsername()
+                );
+
                 return ResponseEntity.ok(response);
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
         } catch (Exception e) {
-            System.err.println("Error in admin login: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error in admin login: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -222,13 +232,11 @@ public class AdminController {
 
         try {
             adminService.deleteAdmin(id);
-            if (auditService != null) {
-                try {
+            try {
                     auditService.log(currentAdminUsername, "DELETE_ADMIN",
                         "Deleted admin: " + adminToDelete.get().getUsername());
-                } catch (Exception e) {
-                    System.err.println("Error logging admin deletion: " + e.getMessage());
-                }
+            } catch (Exception e) {
+                logger.error("Error logging admin deletion: {}", e.getMessage(), e);
             }
             return ResponseEntity.ok().build();
         } catch (Exception e) {
@@ -244,7 +252,7 @@ public class AdminController {
             currentAdminUsername,
             currentAdminPassword
         );
-        
+
         if (currentAdminOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -259,13 +267,11 @@ public class AdminController {
         if (notificationService != null) {
             try {
                 notificationService.sendBroadcastAnnouncement(title, message);
-                if (auditService != null) {
-                    try {
-                        auditService.log(currentAdminUsername, "ANNOUNCEMENT", 
-                            "Sent announcement: " + title);
-                    } catch (Exception e) {
-                        System.err.println("Error logging announcement: " + e.getMessage());
-                    }
+                try {
+                    auditService.log(currentAdminUsername, "ANNOUNCEMENT",
+                        "Sent announcement: " + title);
+                } catch (Exception e) {
+                    logger.error("Error logging announcement: {}", e.getMessage(), e);
                 }
                 return ResponseEntity.ok().build();
             } catch (Exception e) {

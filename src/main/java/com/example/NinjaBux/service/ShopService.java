@@ -67,8 +67,6 @@ public class ShopService {
       throw new ShopItemUnavailableException(item.getName());
     }
 
-    checkCategoryRestrictions(item, ninja);
-
     checkPurchaseLimits(ninja, item);
 
     int currentBalance = ledgerService.getBuxBalance(ninjaId);
@@ -82,12 +80,6 @@ public class ShopService {
     ledgerService.recordPurchaseSpend(purchase);
 
     return purchase;
-  }
-
-  private void checkCategoryRestrictions(ShopItem item, Ninja ninja) {
-    if (item.getRestrictedCategories() == null || item.getRestrictedCategories().trim().isEmpty()) {
-      return;
-    }
   }
 
   private void checkPurchaseLimits(Ninja ninja, ShopItem item) {
@@ -236,10 +228,9 @@ public class ShopService {
 
   @Transactional
   public void deleteItem(Long itemId) {
-    ShopItem item =
-        shopItemRepository
-            .findById(itemId)
-            .orElseThrow(() -> new ShopItemNotFoundException(itemId));
-    shopItemRepository.delete(item);
+    if (!shopItemRepository.existsById(itemId)) {
+      throw new ShopItemNotFoundException(itemId);
+    }
+    shopItemRepository.deleteById(itemId);
   }
 }
