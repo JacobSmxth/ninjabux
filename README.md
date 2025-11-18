@@ -1,44 +1,130 @@
 # NinjaBux System
 
-## Features
+A gamified progress tracking and rewards system for Code Ninjas students.
 
-- Students earn Bux by completing lessons and progressing through belts
-- Students can browse shop and spend their Bux
-- Leaderboards showing top earners and performers
-- Weekly quiz questions for bonus Bux
-- Achievement system with badges
-- Real-time notifications for progress updates
-- Admin panel for managing students, shop items, and analytics
-- Admin can give/remove student progress, handle refunds
-- Quiz management and student question review
-- Full audit trail of admin actions
+## Overview
 
-## TODO
+NinjaBux is a full-stack web application that allows students to earn virtual currency (Bux) by completing coding lessons and progressing through belt levels. Students can spend their earned Bux in a virtual shop, compete on leaderboards, and unlock achievements.
 
-- Leaderboard doesn't properly list all time top earners
-- Top spenders leaderboard not working
-- All leaderboards need review and styling fixes
-- Veteran 1,2,3 achievements
-- Clean up legacy points system
-- Fix frontend alerts vs modal popups
-- Add purchase limits system
-- Fix white belt colors (poor contrast)
-- Clean up glow effects on badges
-- Add back button on admin login
-- Improve manage Bux UI form in ninja details page
-- Better shop items needed (i think)
-- Remove belt adjustment block (accidental over-leveling)
-- Fix lesson tracking for most improved
-- Test analytics system
-- Achievement progress tracking in admin panel
-- Better error handling
-- Review AI-generated frontend code
-- Fix Bux balance decimals (remove .00 display)
+## Tech Stack
 
-## Bugs
+### Backend
+- Java 21 with Spring Boot 3.5.7
+- Spring Security with JWT authentication
+- Spring Data JPA with H2 database
+- WebSocket support for real-time notifications
+- SLF4J logging
 
-- Achievement notifications sometimes don't show
-- Leaderboard shows stale data sometimes
-- Shop purchase limits fail under heavy load
-- Quiz submission takes multiple attempts on slow connections
-- Progress history editing creates duplicate entries
+### Frontend
+- React 18 with TypeScript
+- React Router for navigation
+- Axios for API communication
+- WebSocket client for real-time updates
+- Vite for build tooling
+
+## Key Features
+
+### Student Features
+- Earn Bux by completing lessons and leveling up
+- Browse and purchase items from the shop
+- View leaderboards (top earners, top spenders, most improved, quiz champions)
+- Answer weekly quiz questions for bonus Bux
+- Unlock and display achievements with badges
+- Real-time notifications for progress updates and achievements
+- Auto-logout after 15 minutes of inactivity
+
+### Admin Features
+- Manage students (create, edit, lock/unlock accounts)
+- Track student progress with detailed history
+- Adjust Bux balances and handle refunds
+- Manage shop items with purchase limits and restrictions
+- Create and review quiz questions
+- Award achievements manually
+- View analytics and engagement metrics
+- Monitor ninja login activity
+- Send announcements to all students
+- Full audit trail of all admin actions
+- JWT authentication with 30-minute token expiration
+
+### Security
+- JWT-based stateless authentication
+- Role-based access control (NINJA vs ADMIN)
+- Session management with automatic timeout
+- Login tracking for security monitoring
+- Password-protected admin operations
+
+## Architecture
+
+### Authentication Flow
+- Students log in with username only
+- Admins log in with username and password
+- JWT tokens issued on successful authentication
+- Tokens stored in sessionStorage (cleared on browser close)
+- Inactivity timer tracks user activity
+- Auto-logout after timeout period
+
+### Real-time Updates
+- WebSocket connections for live notifications
+- Lock status synchronization
+- Achievement unlocks
+- Progress updates
+- System announcements
+
+### Database
+- H2 in-file database for development
+- JPA entities for domain model
+- Audit logging for admin actions
+- Login tracking for security
+
+## Project Structure
+
+```
+ninjabux/
+├── src/main/java/com/example/NinjaBux/
+│   ├── config/          # Spring configuration
+│   ├── controller/      # REST endpoints
+│   ├── domain/          # JPA entities
+│   ├── dto/             # Data transfer objects
+│   ├── exception/       # Custom exceptions
+│   ├── repository/      # Data access layer
+│   ├── security/        # JWT and auth security
+│   ├── service/         # Business logic
+│   └── util/            # Utility classes
+├── frontend/src/
+│   ├── components/      # React components
+│   ├── context/         # React context providers
+│   ├── hooks/           # Custom React hooks
+│   ├── pages/           # Page components
+│   ├── services/        # API clients
+│   ├── types/           # TypeScript definitions
+│   └── utils/           # Utility functions
+└── data/                # H2 database files
+```
+
+## Running the Application
+
+### Backend
+```bash
+gradle bootRun
+```
+Server starts on http://localhost:8080
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Development server starts on http://localhost:5173
+
+## Setup
+
+On first launch, the system prompts for initial admin account creation. The admin can then create student accounts and configure shop items.
+
+## Development Notes
+
+- Backend uses constructor-based dependency injection
+- Services extend base classes to reduce code duplication
+- DTOs prevent Hibernate proxy serialization issues
+- Frontend uses context API for state management
+- Protected routes enforce authentication requirements
