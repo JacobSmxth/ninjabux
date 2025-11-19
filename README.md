@@ -1,10 +1,16 @@
-# NinjaBux System
+# Code Ninjas Bux
+
+![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.7-brightgreen?logo=spring)
+![React](https://img.shields.io/badge/React-18-blue?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 
 A gamified progress tracking and rewards system for Code Ninjas students.
 
 ## Overview
 
-NinjaBux is a full-stack web application that allows students to earn virtual currency (Bux) by completing coding lessons and progressing through belt levels. Students can spend their earned Bux in a virtual shop, compete on leaderboards, and unlock achievements.
+Code Ninjas Bux is a full-stack web application that allows students to earn virtual currency (Bux) as they progress through the Code Ninjas curriculum. Students can spend their earned Bux in a virtual shop, compete on leaderboards, and unlock achievements.
 
 ## Tech Stack
 
