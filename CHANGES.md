@@ -1,17 +1,56 @@
 ## Changes
 
-* Remove deprecated balance tracking fields (totalBuxEarned/totalBuxSpent) to eliminate dual source of truth
-* Remove ledger cache fields (cachedBuxBalanceQuarters/cachedLegacyBalance) to prevent stale balance issues under concurrent updates
-* Remove lesson counter fields (lessonsAllTime/lessonsSinceConversion/postOnboardLessonCount/postLegacyAlternator) to simplify domain model
-* Remove lock metadata fields (lockReason/lockedAt) to reduce domain complexity
-* Remove adminNote field to simplify admin interface
-* Remove Progress Velocity analytics feature (calculateProgressVelocity method, ProgressVelocityMetrics DTO, UI section)
-* Remove Price Optimization analytics feature (price optimization calculation, PriceOptimizationData DTO, UI section)
+### Refactoring & Code Quality
+* Refactored backend code to eliminate redundancies and improve maintainability
+* Created NinjaServiceBase to eliminate duplicate findNinja logic
+* Added DateUtils class for centralized date operations
+* Added AdminUtils class for admin-related utilities
+* Replaced System.out/err with proper loggers throughout codebase
+* Cleaned up leaderboard logic
+* Removed empty CategoryRestrictions method
+* Optimized delete code in NinjaAdminService
+
+### JWT Authentication & Security
+* Added JWT-based authentication system
+* Created JwtUtil service for token handling
+* Created JwtAuthenticationFilter for request validation
+* Updated SecurityConfig with JWT integration
+* Created AuthController for login/token endpoints
+* Updated AdminController.login() to return JWT tokens
+* Added PasswordPromptModal for secure admin operations
+* Implemented auto-logout based on token expiration
+* Added Ninja login tracking to review access logs
+
+### Frontend Improvements
+* Refactored UI components for consistency
+* Normalized colors across application
+* Cleaned up lint errors
+* Updated icon usage to be consistent
+* Refactored ninja creation form with corrected level defaults
+* Improved App.tsx structure with auth integration
+* Updated Login and AdminLogin pages to use JWT auth
+
+### Backend Refactoring (Continued)
+* Removed deprecated balance tracking fields (totalBuxEarned/totalBuxSpent) to eliminate dual source of truth
+* Removed ledger cache fields (cachedBuxBalanceQuarters/cachedLegacyBalance) to prevent stale balance issues under concurrent updates
+* Removed lesson counter fields (lessonsAllTime/lessonsSinceConversion/postOnboardLessonCount/postLegacyAlternator) to simplify domain model
+* Removed lock metadata fields (lockReason/lockedAt) to reduce domain complexity
+* Removed adminNote field to simplify admin interface
+* Removed Progress Velocity analytics feature (calculateProgressVelocity method, ProgressVelocityMetrics DTO, UI section)
+* Removed Price Optimization analytics feature (price optimization calculation, PriceOptimizationData DTO, UI section)
 * Always recalculate balance from ledger instead of using cache in getBuxBalanceQuarters
-* Simplify createNinja by always calling onboardNinjaWithLegacy regardless of starting position
-* Simplify lock checks by removing lockReason dependency
-* Centralize timestamp initialization using @PrePersist hook
-* Add domain methods (lock/unlock/recordAnswer) to encapsulate state transitions
+* Simplified createNinja by always calling onboardNinjaWithLegacy regardless of starting position
+* Simplified lock checks by removing lockReason dependency
+* Centralized timestamp initialization using @PrePersist hook
+* Added domain methods (lock/unlock/recordAnswer) to encapsulate state transitions
+
+### Shop & Configuration
+* Cleaned up shop CSS styling
+* Updated default prices in DataInitializer
+
+### Architecture & Belt System
+* Refactored belt enum and created beltSpec to better encapsulate levels and lessons
+* Improved belt specification structure
 
 ## Up Next
 

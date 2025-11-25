@@ -48,8 +48,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/h2-console/**", "/ws/**", "/app/**", "/topic/**", "/queue/**").permitAll()
                 .requestMatchers("/api/auth/**", "/api/admin/setup", "/api/admin/setup-needed", "/api/admin/login").permitAll()
+                .requestMatchers("/api/shop/items", "/api/shop/items/all", "/api/shop/items/category/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/ninjas/**").hasAnyRole("NINJA", "ADMIN")
+                .requestMatchers("/api/shop/**").hasAnyRole("NINJA", "ADMIN")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ninjaApi, shopApi } from '../services/api';
 import type { Ninja, ShopItem, Purchase } from '../types';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -36,11 +36,7 @@ export default function Shop({ ninjaId }: Props) {
     onConfirm: () => {},
   });
   
-  useEffect(() => {
-    loadData();
-  }, [ninjaId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [ninjaData, itemsData, purchasesData] = await Promise.all([
@@ -51,14 +47,6 @@ export default function Shop({ ninjaId }: Props) {
       setNinja(ninjaData);
       setItems(itemsData);
       setPurchases(purchasesData);
-      
-      // update lock status so overlay shows if needed
-      if (ninjaData.isLocked) {
-        setLockStatus(true, ninjaData.lockReason || 'Your account is locked. Please get back to work!');
-      } else {
-        setLockStatus(false, '');
-      }
-      
       setError('');
     } catch (err: any) {
       if (err.response?.status === 403 || err.message?.includes('Account is locked')) {
@@ -70,7 +58,11 @@ export default function Shop({ ninjaId }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ninjaId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handlePurchase = async (itemId: number, itemName: string, price: number) => {
     if (!ninja) return;

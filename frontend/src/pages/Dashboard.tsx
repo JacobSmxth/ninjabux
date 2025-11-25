@@ -7,6 +7,11 @@ import { useLockContext } from '../context/LockContext';
 import AchievementIcon from '../components/AchievementIcon';
 import { getBeltTheme, defaultBeltTheme } from '../utils/beltTheme';
 import { formatBux } from '../utils/format';
+import PageLayout from '../components/PageLayout';
+import BeltTag from '../components/BeltTag';
+import BalanceCard from '../components/BalanceCard';
+import MessageBanner from '../components/MessageBanner';
+import SectionHeader from '../components/SectionHeader';
 import './Dashboard.css';
 
 
@@ -41,14 +46,6 @@ export default function Dashboard({ ninjaId }: Props) {
       setAllPurchases(allData);
       setProgressHistory(historyData);
       setTopAchievements(achievementsData);
-
-      // Update lock status
-      if (ninjaData.isLocked) {
-        setLockStatus(true, ninjaData.lockReason || 'Your account is locked. Please get back to work!');
-      } else {
-        setLockStatus(false, '');
-      }
-
       setError('');
 
       try {
@@ -68,99 +65,88 @@ export default function Dashboard({ ninjaId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [ninjaId, setLockStatus]);
+  }, [ninjaId]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
 
-  const getBeltColor = (belt: string) => {
-    return belt.toLowerCase();
-  };
-
   const beltTheme = ninja ? getBeltTheme(ninja.currentBeltType) : defaultBeltTheme;
 
   if (loading) {
-    return <div className="dashboard-container"><h2>Loading...</h2></div>;
+    return (
+      <PageLayout title="Dashboard" containerClass="dashboard-container">
+        <h2>Loading...</h2>
+      </PageLayout>
+    );
   }
 
   if (error || !ninja) {
     return (
-      <div className="dashboard-container">
-        <p className="error">{error || 'Ninja not found'}</p>
-      </div>
+      <PageLayout title="Dashboard" containerClass="dashboard-container">
+        <MessageBanner message={error || 'Ninja not found'} type="error" />
+      </PageLayout>
     );
   }
 
+  const headerAction = (
+    <button
+      onClick={() => navigate('/quiz')}
+      style={{
+        background: '#000000',
+        color: '#ffffff',
+        border: '1px solid rgba(15, 23, 42, 0.15)',
+        padding: '0.75rem 1.5rem',
+        borderRadius: '12px',
+        fontSize: '1rem',
+        fontWeight: bigQuestion && !bigQuestion.hasAnswered ? 700 : 600,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        boxShadow: '0 0 18px rgba(107, 114, 128, 0.35)',
+        animation: bigQuestion && !bigQuestion.hasAnswered ? 'pulse-glow-belt 2s ease-in-out infinite' : 'none',
+        '--belt-color': '#737373',
+        '--belt-color-rgba-50': 'rgba(115, 115, 115, 0.5)',
+        '--belt-color-rgba-80': 'rgba(115, 115, 115, 0.8)',
+        '--belt-color-rgba-30': 'rgba(115, 115, 115, 0.3)',
+      } as React.CSSProperties}
+    >
+      <FiHelpCircle size={bigQuestion && !bigQuestion.hasAnswered ? 20 : 18} />
+      {bigQuestion && !bigQuestion.hasAnswered ? 'ANSWER QUESTION!' : 'Quiz'}
+    </button>
+  );
+
   return (
-    <div className="dashboard-container">
-      <div className="ninja-header" style={{ borderBottomColor: beltTheme.primary }}>
-        <div className="ninja-info">
-          <div className="ninja-name-row">
-            <h1>{ninja.firstName} {ninja.lastName}</h1>
-            <div className="progress-inline">
-              Level {ninja.currentLevel}, Lesson {ninja.currentLesson}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div className={`belt-display belt-${getBeltColor(ninja.currentBeltType)}`} style={{
-              border: `3px solid ${beltTheme.primary}`,
-              color: '#000000',
-              background: 'transparent',
-            }}>
-              {ninja.currentBeltType} BELT
-            </div>
-            <button
-              onClick={() => navigate('/quiz')}
-              style={{
-                background: '#000000',
-                color: '#ffffff',
-                border: '1px solid rgba(15, 23, 42, 0.15)',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '12px',
-                fontSize: '1rem',
-                fontWeight: bigQuestion && !bigQuestion.hasAnswered ? 700 : 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                boxShadow: '0 0 18px rgba(107, 114, 128, 0.35)',
-                animation: bigQuestion && !bigQuestion.hasAnswered ? 'pulse-glow-belt 2s ease-in-out infinite' : 'none',
-                '--belt-color': '#737373',
-                '--belt-color-rgba-50': 'rgba(115, 115, 115, 0.5)',
-                '--belt-color-rgba-80': 'rgba(115, 115, 115, 0.8)',
-                '--belt-color-rgba-30': 'rgba(115, 115, 115, 0.3)',
-              } as React.CSSProperties}
-            >
-              <FiHelpCircle size={bigQuestion && !bigQuestion.hasAnswered ? 20 : 18} />
-              {bigQuestion && !bigQuestion.hasAnswered ? 'ANSWER QUESTION!' : 'Quiz'}
-            </button>
+    <PageLayout
+      title={`${ninja.firstName} ${ninja.lastName}`}
+      eyebrow={`Level ${ninja.currentLevel}, Lesson ${ninja.currentLesson}`}
+      actions={headerAction}
+      containerClass="dashboard-container"
+      containerStyle={{
+        '--accent': beltTheme.primary,
+        '--accent-strong': beltTheme.accent
+      } as React.CSSProperties}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <BeltTag beltType={ninja.currentBeltType} label={`${ninja.currentBeltType} Belt`} size="large" />
+          <div className="progress-inline">
+            Level {ninja.currentLevel}, Lesson {ninja.currentLesson}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div className="balance-card" style={{
-            background: `linear-gradient(135deg, ${beltTheme.primary} 0%, ${beltTheme.primary}dd 100%)`,
-            color: beltTheme.secondary
-          }}>
-            <div className="balance-label">Balance</div>
-            <div className="balance-amount">{formatBux(ninja.buxBalance)} Bux</div>
-            {ninja.legacyBalance !== undefined && ninja.legacyBalance > 0 && (
-              <div className="balance-legacy" style={{ fontSize: '0.9rem', opacity: 0.9, marginTop: '0.25rem' }}>
-                {ninja.legacyBalance} Legacy
-              </div>
-            )}
-          </div>
-        </div>
+        <BalanceCard balance={ninja.buxBalance} beltType={ninja.currentBeltType} label="Balance" />
       </div>
 
       {/* Top Achievements */}
       {topAchievements.length > 0 && (
         <div className="achievements-section" style={{ borderColor: beltTheme.primary }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <FiAward size={24} color="#000000" />
-            <h2 style={{ margin: 0, color: '#000000' }}>Top Achievements</h2>
-          </div>
+          <SectionHeader
+            title="Top Achievements"
+            subtitle="Highlights from your recent progress"
+            action={<FiAward size={24} color={beltTheme.textColor} />}
+          />
           <div className="achievements-grid">
             {topAchievements.map((progress) => (
               <div
@@ -281,6 +267,6 @@ export default function Dashboard({ ninjaId }: Props) {
           <p>No purchases yet. Visit the shop to spend your Bux!</p>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }

@@ -6,6 +6,7 @@ import com.example.NinjaBux.exception.NinjaNotFoundException;
 import com.example.NinjaBux.repository.AchievementProgressRepository;
 import com.example.NinjaBux.repository.LedgerTxnRepository;
 import com.example.NinjaBux.repository.LegacyLedgerTxnRepository;
+import com.example.NinjaBux.repository.NinjaLoginLogRepository;
 import com.example.NinjaBux.repository.NinjaRepository;
 import com.example.NinjaBux.repository.ProgressHistoryRepository;
 import com.example.NinjaBux.repository.PurchaseRepository;
@@ -29,6 +30,8 @@ public class NinjaAdminService extends NinjaServiceBase {
   @Autowired private LedgerTxnRepository ledgerTxnRepository;
 
   @Autowired private LegacyLedgerTxnRepository legacyLedgerTxnRepository;
+
+  @Autowired private NinjaLoginLogRepository ninjaLoginLogRepository;
 
   @Autowired private LedgerService ledgerService;
 
@@ -82,6 +85,12 @@ public class NinjaAdminService extends NinjaServiceBase {
         legacyLedgerTxnRepository.findByNinjaOrderByCreatedAtDesc(ninja);
     if (!legacyTxns.isEmpty()) {
       legacyLedgerTxnRepository.deleteAll(legacyTxns);
+    }
+
+    List<com.example.NinjaBux.domain.NinjaLoginLog> loginLogs =
+        ninjaLoginLogRepository.findByNinjaOrderByLoginTimeDesc(ninja);
+    if (!loginLogs.isEmpty()) {
+      ninjaLoginLogRepository.deleteAll(loginLogs);
     }
 
     ninjaRepository.deleteById(ninjaId);

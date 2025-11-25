@@ -5,7 +5,6 @@ import type { Ninja, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, 
 import { FiEdit2, FiTrash2, FiPause, FiPlay, FiUsers, FiShoppingBag, FiHelpCircle, FiAward, FiSettings, FiSearch, FiPlus, FiDollarSign, FiShoppingCart, FiTarget, FiTrendingUp, FiClock, FiLock } from 'react-icons/fi';
 import { useToastContext } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import Toast from '../components/Toast';
 import ConfirmationModal from '../components/ConfirmationModal';
 import NinjaFormModal, { type NinjaFormValues } from '../components/NinjaFormModal';
 import AchievementIcon from '../components/AchievementIcon';
@@ -234,7 +233,7 @@ function SuggestionReviewList({
 export default function AdminDashboard({ onLogout }: Props) {
   const { username } = useAuth();
   const navigate = useNavigate();
-  const { toasts, removeToast, success, error: showError } = useToastContext();
+  const { success, error: showError } = useToastContext();
   const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
 
   // remember which tab admin was on so it persists across reloads
@@ -1309,20 +1308,6 @@ export default function AdminDashboard({ onLogout }: Props) {
 
   return (
     <div className="admin-container">
-      {/* Toast Container - AdminDashboard uses its own toast instance for success/error messages */}
-      <div className="toast-container">
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            message={toast.message}
-            type={toast.type}
-            title={toast.title}
-            duration={toast.duration}
-            onClose={() => removeToast(toast.id)}
-          />
-        ))}
-      </div>
-
       {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}
@@ -2316,27 +2301,6 @@ export default function AdminDashboard({ onLogout }: Props) {
               <div className="form-row">
                 <div className="form-group">
                   <label>Icon:</label>
-                  <select
-                    value={achievementFormData.icon}
-                    onChange={(e) => setAchievementFormData({ ...achievementFormData, icon: e.target.value })}
-                  >
-                    <option value="🎯">🎯 Target</option>
-                    <option value="📚">📚 Book</option>
-                    <option value="⭐">⭐ Star</option>
-                    <option value="💯">💯 Hundred</option>
-                    <option value="🥋">🥋 Karate</option>
-                    <option value="🟠">🟠 Orange</option>
-                    <option value="🟢">🟢 Green</option>
-                    <option value="🔵">🔵 Blue</option>
-                    <option value="❓">❓ Question</option>
-                    <option value="💎">💎 Diamond</option>
-                    <option value="💰">💰 Money</option>
-                    <option value="💸">💸 Flying Money</option>
-                    <option value="🏆">🏆 Trophy</option>
-                    <option value="🛍️">🛍️ Shopping</option>
-                    <option value="🤝">🤝 Handshake</option>
-                    <option value="💡">💡 Light Bulb</option>
-                  </select>
                 </div>
                 <div className="form-group">
                   <label>Bux Reward:</label>

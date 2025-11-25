@@ -1,0 +1,360 @@
+/* Design Tokens - Shared styles and utilities for consistent theming */
+
+/* ======================
+   Belt Tier Theme Tokens
+   ====================== */
+
+/* Default values (lower belt palette) to prevent unset vars before tier class is applied */
+:root {
+  --surface: #ffffff;
+  --surface-secondary: #f9fafb;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --text-secondary: #666666;
+  --border: #e5e7eb;
+  --accent: #4169e1;
+  --accent-strong: #2d4fc8;
+  --shadow-sm: 0 2px 8px rgba(65, 105, 225, 0.08);
+  --shadow-md: 0 4px 12px rgba(65, 105, 225, 0.12);
+  --shadow-lg: 0 8px 30px rgba(65, 105, 225, 0.15);
+  --bg-gradient: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+  --bg-pattern: radial-gradient(circle at 1px 1px, rgba(65, 105, 225, 0.05) 1px, transparent 1px);
+}
+
+/* Lower belts (White → Blue): Light, approachable aesthetic */
+:root.belt-tier-lower {
+  --surface: #ffffff;
+  --surface-secondary: #f9fafb;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --text-secondary: #666666;
+  --border: #e5e7eb;
+  --accent: #4169e1;
+  --accent-strong: #2d4fc8;
+  --shadow-sm: 0 2px 8px rgba(65, 105, 225, 0.08);
+  --shadow-md: 0 4px 12px rgba(65, 105, 225, 0.12);
+  --shadow-lg: 0 8px 30px rgba(65, 105, 225, 0.15);
+  --bg-gradient: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+  --bg-pattern: radial-gradient(circle at 1px 1px, rgba(65, 105, 225, 0.05) 1px, transparent 1px);
+}
+
+/* Upper belts (Purple → Black): Deep, mature aesthetic */
+:root.belt-tier-upper {
+  --surface: #1a1a2e;
+  --surface-secondary: #0f3460;
+  --card: #16213e;
+  --text: #ffffff;
+  --text-secondary: #b0b8d4;
+  --border: #243b69;
+  --accent: #e94560;
+  --accent-strong: #d63649;
+  --shadow-sm: 0 2px 8px rgba(233, 69, 96, 0.15);
+  --shadow-md: 0 4px 12px rgba(233, 69, 96, 0.2);
+  --shadow-lg: 0 8px 30px rgba(233, 69, 96, 0.25);
+  --bg-gradient: linear-gradient(135deg, #0f3460 0%, #1a1a2e 50%, #16213e 100%);
+  --bg-pattern: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(233, 69, 96, 0.03) 2px, rgba(233, 69, 96, 0.03) 4px);
+}
+
+/* ======================
+   Shared Component Styles
+   ====================== */
+
+/* Container styling - used across Dashboard, Shop, Admin, etc. */
+.page-container {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  border: 1px solid var(--border);
+}
+
+.page-container::before {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.06;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Background treatment for entire app */
+body {
+  background: var(--surface);
+  background-image: var(--bg-pattern);
+}
+
+/* Header styling - consistent across pages */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 4px solid var(--accent);
+  position: relative;
+  z-index: 1;
+}
+
+.page-title {
+  font-size: 2.8rem;
+  color: var(--text);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+/* ======================
+   Card and Button Styles
+   ====================== */
+
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.card.interactive:hover {
+  cursor: pointer;
+}
+
+.button-primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.button-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button-secondary {
+  background: var(--surface-secondary);
+  color: var(--text);
+  border: 2px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: var(--card);
+  box-shadow: var(--shadow-md);
+}
+
+.button-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ======================
+   Text and Content Styles
+   ====================== */
+
+.text-large {
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.text-medium {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.text-small {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.text-uppercase {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ======================
+   Badge and Status Styles
+   ====================== */
+
+.badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+  border: 2px solid #28a745;
+}
+
+.badge-error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 2px solid #f5c6cb;
+}
+
+.badge-info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 2px solid #bee5eb;
+}
+
+.badge-warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 2px solid #ffeeba;
+}
+
+/* ======================
+   Animation and Effects
+   ====================== */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.8), 0 0 60px rgba(99, 102, 241, 0.5);
+  }
+}
+
+@keyframes pulse-glow-belt {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--belt-color-rgba-50, rgba(227, 30, 36, 0.5)),
+                0 0 40px var(--belt-color-rgba-30, rgba(227, 30, 36, 0.3)),
+                0 0 60px rgba(227, 30, 36, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px var(--belt-color-rgba-80, rgba(227, 30, 36, 0.8)),
+                0 0 60px var(--belt-color-rgba-50, rgba(227, 30, 36, 0.5)),
+                0 0 80px var(--belt-color-rgba-30, rgba(227, 30, 36, 0.3));
+  }
+}
+
+.glow-animation {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.glow-animation-belt {
+  animation: pulse-glow-belt 2s ease-in-out infinite;
+}
+
+/* ======================
+   Utility Classes
+   ====================== */
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-gap-sm {
+  gap: 0.5rem;
+}
+
+.flex-gap-md {
+  gap: 1rem;
+}
+
+.flex-gap-lg {
+  gap: 1.5rem;
+}
+
+.margin-bottom-sm {
+  margin-bottom: 0.5rem;
+}
+
+.margin-bottom-md {
+  margin-bottom: 1rem;
+}
+
+.margin-bottom-lg {
+  margin-bottom: 1.5rem;
+}
+
+.margin-bottom-xl {
+  margin-bottom: 2rem;
+}
+
+.padding-sm {
+  padding: 0.5rem;
+}
+
+.padding-md {
+  padding: 1rem;
+}
+
+.padding-lg {
+  padding: 1.5rem;
+}
+
+.padding-xl {
+  padding: 2rem;
+}
+
+.rounded-sm {
+  border-radius: 8px;
+}
+
+.rounded-md {
+  border-radius: 12px;
+}
+
+.rounded-lg {
+  border-radius: 16px;
+}
+
+.shadow-sm {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.shadow-md {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.shadow-lg {
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}

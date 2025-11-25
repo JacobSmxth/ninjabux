@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { useCallback } from 'react';
 import Login from './pages/Login';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -12,12 +12,12 @@ import Quiz from './pages/Quiz';
 import Toast from './components/Toast';
 import { useToastContext } from './context/ToastContext';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useLockPolling } from './hooks/useLockPolling';
 import { ToastProvider } from './context/ToastContext';
 import { LockProvider, useLockContext } from './context/LockContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FiLock } from 'react-icons/fi';
-import './App.css';
 
 function ToastHost() {
   const { toasts, removeToast } = useToastContext();
@@ -42,25 +42,15 @@ function ToastHost() {
 
 function AppContent() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { isLocked, lockMessage, setLockStatus, checkLockStatus } = useLockContext();
+  const { isLocked, lockMessage, setLockStatus } = useLockContext();
   const { isAuthenticated, userId, logout: authLogout, userType } = useAuth();
 
   const handleLockStatusChange = useCallback((locked: boolean, message: string) => {
     setLockStatus(locked, message);
   }, [setLockStatus]);
 
-  useEffect(() => {
-    if (userId && userType === 'NINJA') {
-      checkLockStatus(userId);
-      const interval = setInterval(() => {
-        checkLockStatus(userId);
-      }, 5000);
-      return () => clearInterval(interval);
-    } else {
-      setLockStatus(false, '');
-    }
-  }, [userId, userType, location.pathname, checkLockStatus, setLockStatus]);
+  // Set up automatic lock status polling for ninja users
+  useLockPolling(isAuthenticated && userType === 'NINJA' ? userId : null);
 
   const handleLogout = () => {
     authLogout();
@@ -70,25 +60,18 @@ function AppContent() {
     navigate('/admin-login', { replace: true });
   };
 
-  useWebSocket(userType === 'NINJA' ? userId : null, handleLockStatusChange);
+  // Only initialize WebSocket for authenticated ninja users
+  useWebSocket(isAuthenticated && userType === 'NINJA' ? userId : null, handleLockStatusChange);
 
-  if (!isAuthenticated && (location.pathname === '/' || location.pathname === '/admin-login')) {
+  if (!isAuthenticated) {
     return (
       <>
         <ToastHost />
         <Routes>
           <Route path="/" element={<Login onSwitchToAdmin={switchToAdmin} />} />
           <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="*" element={<Login onSwitchToAdmin={switchToAdmin} />} />
         </Routes>
-      </>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <>
-        <ToastHost />
-        <Login onSwitchToAdmin={switchToAdmin} />
       </>
     );
   }
