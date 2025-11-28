@@ -25,37 +25,13 @@ public class AnalyticsService {
 
   @Autowired private PurchaseRepository purchaseRepository;
 
-  @Autowired private QuestionAnswerRepository questionAnswerRepository;
-
   @Autowired private ShopItemRepository shopItemRepository;
 
   @Autowired(required = false)
   private AchievementProgressRepository achievementProgressRepository;
 
-  @Autowired private BeltRewardCalculator beltRewardCalculator;
-
   @Autowired private LedgerService ledgerService;
 
-  private int calculateLessonsBetween(
-      BeltType fromBelt,
-      int fromLevel,
-      int fromLesson,
-      BeltType toBelt,
-      int toLevel,
-      int toLesson) {
-    if (fromBelt == null || toBelt == null) {
-      return Math.max(1, toLesson - fromLesson);
-    }
-
-    if (fromBelt.equals(toBelt) && fromLevel == toLevel) {
-      return toLesson - fromLesson;
-    }
-
-    int fromTotal = BeltRewardCalculator.calculateTotalLessons(fromBelt, fromLevel, fromLesson);
-    int toTotal = BeltRewardCalculator.calculateTotalLessons(toBelt, toLevel, toLesson);
-
-    return toTotal - fromTotal;
-  }
 
   public AnalyticsResponse getAnalytics() {
     AnalyticsResponse response = new AnalyticsResponse();
@@ -181,30 +157,17 @@ public class AnalyticsService {
     AnalyticsResponse.EconomyHealthMetrics metrics = new AnalyticsResponse.EconomyHealthMetrics();
 
     List<Ninja> allNinjas = ninjaRepository.findAll();
+    Map<Long, Integer> balances = ledgerService.getBuxBalances(allNinjas);
 
-    int totalBuxInCirculation =
-        allNinjas.stream().mapToInt(n -> ledgerService.getBuxBalance(n.getId())).sum();
-
-    int totalBuxEarned = 0;
-    int totalBuxSpent = 0;
-    for (Ninja ninja : allNinjas) {
-      List<LedgerTxn> transactions = ledgerService.getLedgerHistory(ninja.getId());
-      for (LedgerTxn txn : transactions) {
-        int amount = txn.getAmount();
-        if (amount > 0) {
-          totalBuxEarned += amount;
-        } else {
-          totalBuxSpent += Math.abs(amount);
-        }
-      }
-    }
+    int totalBuxInCirculation = balances.values().stream().mapToInt(Integer::intValue).sum();
+    int totalBuxEarned = ledgerService.getTotalEarnedGlobal();
+    int totalBuxSpent = ledgerService.getTotalSpentGlobal();
 
     double spendEarnRatio = totalBuxEarned > 0 ? (double) totalBuxSpent / totalBuxEarned : 0.0;
 
     AnalyticsResponse.BalanceDistribution distribution =
         new AnalyticsResponse.BalanceDistribution();
-    for (Ninja ninja : allNinjas) {
-      int balance = ledgerService.getBuxBalance(ninja.getId());
+    for (int balance : balances.values()) {
       if (balance == 0) {
         distribution.setZeroBalance(distribution.getZeroBalance() + 1);
       } else if (balance <= 50) {
@@ -222,7 +185,7 @@ public class AnalyticsService {
     Map<String, List<Integer>> balancesByBelt = new HashMap<>();
     for (Ninja ninja : allNinjas) {
       String belt = ninja.getCurrentBeltType().toString();
-      int balance = ledgerService.getBuxBalance(ninja.getId());
+      int balance = balances.getOrDefault(ninja.getId(), 0);
       balancesByBelt.computeIfAbsent(belt, k -> new ArrayList<>()).add(balance);
     }
 
@@ -244,46 +207,9 @@ public class AnalyticsService {
   private AnalyticsResponse.EngagementMetrics calculateEngagement() {
     AnalyticsResponse.EngagementMetrics metrics = new AnalyticsResponse.EngagementMetrics();
 
-    metrics.setQuizMetrics(calculateQuizMetrics());
     metrics.setShopMetrics(calculateShopMetrics());
     metrics.setLeaderboardMetrics(calculateLeaderboardMetrics());
     metrics.setAchievementMetrics(calculateAchievementMetrics());
-
-    return metrics;
-  }
-
-  private AnalyticsResponse.QuizMetrics calculateQuizMetrics() {
-    AnalyticsResponse.QuizMetrics metrics = new AnalyticsResponse.QuizMetrics();
-
-    List<QuestionAnswer> allAnswers = questionAnswerRepository.findAll();
-    LocalDateTime weekAgo = LocalDateTime.now().minusWeeks(1);
-
-    int totalQuestions =
-        (int) allAnswers.stream().map(QuestionAnswer::getQuestion).distinct().count();
-
-    int totalAnswers = allAnswers.size();
-
-    long correctAnswers = allAnswers.stream().filter(QuestionAnswer::isCorrect).count();
-
-    double averageAccuracy = totalAnswers > 0 ? (double) correctAnswers / totalAnswers * 100 : 0.0;
-
-    int participantsThisWeek =
-        (int)
-            allAnswers.stream()
-                .filter(a -> a.getAnsweredAt().isAfter(weekAgo))
-                .map(QuestionAnswer::getNinja)
-                .distinct()
-                .count();
-
-    int totalNinjas = (int) ninjaRepository.count();
-    double participationRate =
-        totalNinjas > 0 ? (double) participantsThisWeek / totalNinjas * 100 : 0.0;
-
-    metrics.setTotalQuestions(totalQuestions);
-    metrics.setTotalAnswers(totalAnswers);
-    metrics.setAverageAccuracy(averageAccuracy);
-    metrics.setParticipantsThisWeek(participantsThisWeek);
-    metrics.setParticipationRate(participationRate);
 
     return metrics;
   }

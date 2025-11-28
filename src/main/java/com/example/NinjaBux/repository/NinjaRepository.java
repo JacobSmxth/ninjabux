@@ -24,8 +24,14 @@ public interface NinjaRepository extends JpaRepository<Ninja, Long> {
            "(:name IS NULL OR LOWER(n.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(n.lastName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(n.username) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
            "(:belt IS NULL OR n.currentBeltType = :belt) AND " +
            "(:locked IS NULL OR n.isLocked = :locked)")
-    Page<Ninja> findByFilters(@Param("name") String name, 
-                              @Param("belt") BeltType belt, 
-                              @Param("locked") Boolean locked, 
+    Page<Ninja> findByFilters(@Param("name") String name,
+                              @Param("belt") BeltType belt,
+                              @Param("locked") Boolean locked,
                               Pageable pageable);
+
+    @Query("SELECT COUNT(n) FROM Ninja n")
+    long countAllNinjas();
+
+    @Query("SELECT COUNT(n) FROM Ninja n WHERE n.isLocked = true")
+    long countLockedNinjas();
 }

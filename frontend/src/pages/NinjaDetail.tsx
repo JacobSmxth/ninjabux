@@ -425,20 +425,6 @@ export default function NinjaDetail() {
                   <span className="info-value" style={{ color: '#92400e', fontWeight: 700 }}>{ninja.legacyBalance} Legacy</span>
                 </div>
               )}
-              <div className="info-item">
-                <span className="info-label">Questions Answered:</span>
-                <span className="info-value">{ninja.totalQuestionsAnswered}</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">Questions Correct:</span>
-                <span className="info-value">{ninja.totalQuestionsCorrect}</span>
-              </div>
-              {ninja.suggestionsBanned && (
-                <div className="info-item" style={{ gridColumn: '1 / -1', background: '#fee2e2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #dc2626' }}>
-                  <span className="info-label" style={{ color: '#dc2626', fontWeight: 600 }}>Suggestions Banned</span>
-                  <span className="info-value" style={{ color: '#dc2626' }}>This ninja cannot suggest questions</span>
-                </div>
-              )}
               {ninja.isLocked && (
                 <div className="info-item" style={{ gridColumn: '1 / -1', background: '#fee2e2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #dc2626' }}>
                   <span className="info-label" style={{ color: '#dc2626', fontWeight: 600 }}>Account Locked</span>
@@ -498,41 +484,6 @@ export default function NinjaDetail() {
                     </button>
                   </div>
                 </div>
-              )}
-              
-              {ninja && (
-                <button 
-                  onClick={async () => {
-                    if (!ninja) return;
-                    const isBanned = ninja.suggestionsBanned || false;
-                    setConfirmationModal({
-                      isOpen: true,
-                      title: isBanned ? 'Unban from Suggestions' : 'Ban from Suggestions',
-                      message: isBanned 
-                        ? 'Allow this ninja to suggest questions again?'
-                        : 'Ban this ninja from suggesting questions?',
-                      confirmText: isBanned ? 'Unban' : 'Ban',
-                      cancelText: 'Cancel',
-                      variant: isBanned ? 'info' : 'warning',
-                      onConfirm: async () => {
-                        setConfirmationModal({ ...confirmationModal, isOpen: false });
-                        try {
-                          const newBannedState = !isBanned;
-                          await ninjaApi.banSuggestions(ninja.id, newBannedState);
-                          setNinja(prev => prev ? { ...prev, suggestionsBanned: newBannedState } : null);
-                          await loadNinjaData();
-                        } catch (err: any) {
-                          alert(err.response?.data?.message || `Failed to ${isBanned ? 'unban' : 'ban'} ninja from suggestions`);
-                          console.error(err);
-                        }
-                      },
-                    });
-                  }}
-                  className={(ninja.suggestionsBanned || false) ? 'btn-success' : 'btn-warning'}
-                  style={{ marginLeft: 'auto' }}
-                >
-                  {(ninja.suggestionsBanned || false) ? 'Unban Suggestions' : 'Ban Suggestions'}
-                </button>
               )}
               
               {ninja && (

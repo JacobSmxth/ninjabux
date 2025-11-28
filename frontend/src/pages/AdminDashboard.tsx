@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ninjaApi, shopApi, bigQuestionApi, adminApi, achievementApi, analyticsApi, ledgerApi } from '../services/api';
-import type { Ninja, Purchase, ShopItem, BigQuestion, CreateBigQuestionRequest, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest, AwardAchievementRequest, AnalyticsSnapshot, LedgerTransaction, NinjaLoginLog } from '../types';
-import { FiEdit2, FiTrash2, FiPause, FiPlay, FiUsers, FiShoppingBag, FiHelpCircle, FiAward, FiSettings, FiSearch, FiPlus, FiDollarSign, FiShoppingCart, FiTarget, FiTrendingUp, FiClock, FiLock } from 'react-icons/fi';
+import { ninjaApi, shopApi, adminApi, achievementApi, analyticsApi, ledgerApi } from '../services/api';
+import type { Ninja, Purchase, ShopItem, AdminAuditLog, Admin, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementCategory, BadgeRarity, CreateAchievementRequest, AwardAchievementRequest, AnalyticsSnapshot, LedgerTransaction, NinjaLoginLog } from '../types';
+import { FiEdit2, FiTrash2, FiPause, FiPlay, FiUsers, FiShoppingBag, FiAward, FiSettings, FiSearch, FiPlus, FiDollarSign, FiShoppingCart, FiTarget, FiTrendingUp, FiClock, FiLock } from 'react-icons/fi';
 import { useToastContext } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -22,22 +22,8 @@ interface NinjaWithPurchases extends Ninja {
   allPurchases?: Purchase[];
 }
 
-interface PendingSuggestion extends BigQuestion {
-  question?: BigQuestion;
-  ninjaName?: string;
-  suggestionsBanned?: boolean;
-}
-interface QuestionFormState {
-  questionDate: string;
-  questionText: string;
-  questionType: CreateBigQuestionRequest['questionType'];
-  correctAnswer: string;
-  correctChoiceIndex: number;
-  choices: [string, string, string, string];
-}
-
-type TabType = 'activity' | 'ninjas' | 'shop' | 'question' | 'achievements' | 'analytics' | 'settings';
-type OverviewSubTab = 'activity' | 'ledger' | 'announcement' | 'ninja-logins';
+type TabType = 'activity' | 'ninjas' | 'shop' | 'achievements' | 'analytics' | 'settings';
+type OverviewSubTab = 'activity' | 'ledger' | 'ninja-logins';
 
 const ADMIN_FORM_INITIAL_STATE = {
   username: '',
@@ -76,159 +62,6 @@ const getErrorStatus = (error: unknown): number | undefined => {
   return undefined;
 };
 
-const normalizeChoices = (choices?: string[]): QuestionFormState['choices'] => ([
-  choices?.[0] ?? '',
-  choices?.[1] ?? '',
-  choices?.[2] ?? '',
-  choices?.[3] ?? '',
-]);
-
-// suggestion review component for pending questions
-function SuggestionReviewList({
-  suggestions,
-  onReject,
-  onBan
-}: {
-  suggestions: PendingSuggestion[];
-  onReject: (id: number, reason: string) => void;
-  onBan: (ninjaId: number, banned: boolean) => void;
-}) {
-  const [rejectStates, setRejectStates] = useState<Map<number, { showInput: boolean; reason: string }>>(new Map());
-
-  const handleRejectClick = (id: number) => {
-    setRejectStates(new Map(rejectStates.set(id, { showInput: true, reason: '' })));
-  };
-
-  const handleRejectConfirm = (id: number) => {
-    const state = rejectStates.get(id);
-    onReject(id, state?.reason || '');
-    const newStates = new Map(rejectStates);
-    newStates.delete(id);
-    setRejectStates(newStates);
-  };
-
-  const handleRejectCancel = (id: number) => {
-    const newStates = new Map(rejectStates);
-    newStates.delete(id);
-    setRejectStates(newStates);
-  };
-
-  if (suggestions.length === 0) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center', background: '#f8f9fa', borderRadius: '12px', marginBottom: '2rem' }}>
-        <FiHelpCircle size={48} color="#ccc" style={{ marginBottom: '1rem' }} />
-        <p style={{ color: '#666' }}>No pending suggestions</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="suggestions-section" style={{ marginBottom: '2rem', padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', border: '2px solid #3B82F6' }}>
-      <h3 style={{ color: '#3B82F6', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <FiHelpCircle /> Pending Suggestions ({suggestions.length})
-      </h3>
-      <div className="questions-list">
-        {suggestions.map((suggestion) => {
-          const question = suggestion.question || suggestion;
-          const questionId = question.id || suggestion.id;
-          const rejectState = rejectStates.get(questionId);
-          const showRejectInput = rejectState?.showInput || false;
-          const rejectReason = rejectState?.reason || '';
-
-          const ninjaName = suggestion.ninjaName || (question.suggestedByNinjaId ? `(ID: ${question.suggestedByNinjaId})` : '');
-          const suggestionsBanned = suggestion.suggestionsBanned ?? false;
-
-          return (
-            <div key={questionId} className="question-card" style={{ borderLeftColor: '#3B82F6', background: 'white' }}>
-              <div className="question-header">
-                <div>
-                  <h3>Suggested by {ninjaName || 'Student'}</h3>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span className="type-badge pending" style={{ background: '#3B82F6', color: 'white' }}>
-                      PENDING
-                    </span>
-                    {suggestionsBanned && (
-                      <span className="type-badge" style={{ background: '#dc2626', color: 'white', fontSize: '0.75rem' }}>
-                        BANNED
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="question-actions" style={{ display: 'flex', gap: '0.5rem' }}>
-                  {!showRejectInput ? (
-                    <>
-                      {question.suggestedByNinjaId && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onBan(question.suggestedByNinjaId!, !suggestionsBanned);
-                          }}
-                          className={`btn btn-sm ${suggestionsBanned ? 'btn-success' : 'btn-warning'}`}
-                          title={suggestionsBanned ? 'Unban ninja from suggesting questions' : 'Ban ninja from suggesting questions'}
-                        >
-                          {suggestionsBanned ? 'Unban' : 'Ban'}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleRejectClick(questionId)}
-                        className="btn btn-sm btn-danger"
-                      >
-                        <FiTrash2 /> Reject
-                      </button>
-                    </>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: 1 }}>
-                      <input
-                        type="text"
-                        placeholder="Rejection reason (required)"
-                        value={rejectReason}
-                        onChange={(e) => {
-                          const newStates = new Map(rejectStates);
-                          newStates.set(questionId, { showInput: true, reason: e.target.value });
-                          setRejectStates(newStates);
-                        }}
-                        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.875rem', flex: 1 }}
-                        required
-                      />
-                      <button
-                        onClick={() => handleRejectConfirm(questionId)}
-                        className="btn btn-sm btn-danger"
-                        disabled={!rejectReason.trim()}
-                      >
-                        Confirm
-                      </button>
-                      <button
-                        onClick={() => handleRejectCancel(questionId)}
-                        className="btn btn-sm btn-secondary"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <p className="question-text">{question.questionText}</p>
-              {question.questionType === 'MULTIPLE_CHOICE' && question.choices && (
-                <>
-                  <div className="choices-preview">
-                    {question.choices.map((choice: string, idx: number) => (
-                      <div key={idx} className={`choice-item ${idx === question.correctChoiceIndex ? 'correct-choice' : ''}`}>
-                        {idx + 1}. {choice}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="answer-preview">
-                    <strong>Correct:</strong> Choice {(question.correctChoiceIndex ?? 0) + 1}
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 export default function AdminDashboard({ onLogout }: Props) {
   const { username } = useAuth();
@@ -238,8 +71,9 @@ export default function AdminDashboard({ onLogout }: Props) {
 
   // remember which tab admin was on so it persists across reloads
   const [activeTab, setActiveTab] = useState<TabType>(() => {
-    const savedTab = localStorage.getItem('adminActiveTab');
-    return (savedTab as TabType) || 'activity';
+    const savedTab = localStorage.getItem('adminActiveTab') as TabType | null;
+    const validTabs: TabType[] = ['activity', 'ninjas', 'shop', 'achievements', 'analytics', 'settings'];
+    return savedTab && validTabs.includes(savedTab) ? savedTab : 'activity';
   });
 
   // save tab preference whenever it changes
@@ -248,11 +82,6 @@ export default function AdminDashboard({ onLogout }: Props) {
   }, [activeTab]);
   const [ninjas, setNinjas] = useState<NinjaWithPurchases[]>([]);
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
-  const [questions, setQuestions] = useState<BigQuestion[]>([]);
-  const [pastQuestions, setPastQuestions] = useState<BigQuestion[]>([]);
-  const [showPast, setShowPast] = useState(false);
-  const [pendingSuggestions, setPendingSuggestions] = useState<PendingSuggestion[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
   const [ninjaLoginLogs, setNinjaLoginLogs] = useState<NinjaLoginLog[]>([]);
@@ -291,20 +120,6 @@ export default function AdminDashboard({ onLogout }: Props) {
     price: 0,
     category: '',
   });
-
-  const [editingQuestion, setEditingQuestion] = useState<BigQuestion | null>(null);
-  const [isCreatingQuestion, setIsCreatingQuestion] = useState(false);
-  const [selectedSuggestionId, setSelectedSuggestionId] = useState<number | null>(null);
-  const createEmptyQuestionForm = (): QuestionFormState => ({
-    questionDate: new Date().toISOString().split('T')[0],
-    questionText: '',
-    questionType: 'MULTIPLE_CHOICE',
-    correctAnswer: '',
-    correctChoiceIndex: 0,
-    choices: normalizeChoices(),
-  });
-
-  const [questionFormData, setQuestionFormData] = useState<QuestionFormState>(createEmptyQuestionForm());
 
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [adminFormData, setAdminFormData] = useState({ ...ADMIN_FORM_INITIAL_STATE });
@@ -361,10 +176,6 @@ export default function AdminDashboard({ onLogout }: Props) {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [rebuildingLeaderboard, setRebuildingLeaderboard] = useState(false);
 
-  const [announcementTitle, setAnnouncementTitle] = useState('');
-  const [announcementMessage, setAnnouncementMessage] = useState('');
-  const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
-
   const [overviewSubTab, setOverviewSubTab] = useState<OverviewSubTab>('activity');
   const [ledgerTransactions, setLedgerTransactions] = useState<LedgerTransaction[]>([]);
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -419,31 +230,6 @@ export default function AdminDashboard({ onLogout }: Props) {
     const items = await shopApi.getAllItems();
     setShopItems(items);
   }, []);
-
-  const loadQuestions = useCallback(async () => {
-    const questionsData = await bigQuestionApi.getAllQuestions();
-    setQuestions(questionsData);
-  }, []);
-
-  const loadPastQuestions = useCallback(async () => {
-    try {
-      const pastData = await bigQuestionApi.getPastQuestions();
-      setPastQuestions(pastData);
-    } catch (error) {
-      showError(getErrorMessage(error, 'Failed to load past questions'));
-      console.error(error);
-    }
-  }, [showError]);
-
-  const loadPendingSuggestions = useCallback(async () => {
-    try {
-      const suggestions = await bigQuestionApi.getPendingSuggestions();
-      setPendingSuggestions(suggestions as PendingSuggestion[]);
-    } catch (error) {
-      showError(getErrorMessage(error, 'Failed to load pending suggestions'));
-      console.error(error);
-    }
-  }, [showError]);
 
   const loadAchievements = useCallback(async () => {
     const allAchievements = await achievementApi.getAll();
@@ -521,10 +307,6 @@ export default function AdminDashboard({ onLogout }: Props) {
       if (activeTab === 'activity' || activeTab === 'shop') {
         await loadShopItems();
       }
-      if (activeTab === 'question') {
-        await loadQuestions();
-        await loadPendingSuggestions();
-      }
       if (activeTab === 'achievements') {
         await loadAchievements();
       }
@@ -542,7 +324,7 @@ export default function AdminDashboard({ onLogout }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, username, loadAchievements, loadAllAdmins, loadAnalytics, loadNinjas, loadPendingSuggestions, loadQuestions, loadShopItems, showAdminList, showError]);
+  }, [activeTab, username, loadAchievements, loadAllAdmins, loadAnalytics, loadNinjas, loadShopItems, showAdminList, showError]);
 
   useEffect(() => {
     const loadCurrentAdmin = async () => {
@@ -566,82 +348,6 @@ export default function AdminDashboard({ onLogout }: Props) {
       loadNinjas();
     }
   }, [activeTab, loadNinjas]);
-  const handleUseSuggestion = (suggestion: BigQuestion) => {
-    // Auto-fill form with suggestion data
-    const today = new Date().toISOString().split('T')[0];
-    const mondayDate = getMondayOfWeek(today);
-
-    // Fill in what we can from the suggestion
-    const choices = suggestion.choices && suggestion.choices.length > 0
-      ? [...suggestion.choices, '', '', '', ''].slice(0, 4) // Pad to 4 choices
-      : ['', '', '', ''];
-
-    setSelectedSuggestionId(suggestion.id);
-
-    if (!isCreatingQuestion && !editingQuestion) {
-      setIsCreatingQuestion(true);
-      setEditingQuestion(null);
-      if (activeTab !== 'question') {
-        setActiveTab('question');
-      }
-    }
-
-    setQuestionFormData({
-      questionDate: mondayDate,
-      questionText: suggestion.questionText || '',
-      questionType: 'MULTIPLE_CHOICE',
-      correctAnswer: '',
-      correctChoiceIndex: suggestion.correctChoiceIndex ?? 0,
-      choices: choices,
-    });
-  };
-
-  const handleRejectSuggestion = async (questionId: number, reason: string) => {
-    if (!reason || !reason.trim()) {
-      showError('Please provide a rejection reason');
-      return;
-    }
-
-    try {
-      await bigQuestionApi.rejectQuestion(questionId, {
-        adminUsername: username || '',
-        reason: reason.trim()
-      });
-      await loadPendingSuggestions();
-      success('Question rejected and ninja notified');
-    } catch (error) {
-      showError(getErrorMessage(error, 'Failed to reject question'));
-      console.error(error);
-    }
-  };
-
-  const handleBanSuggestions = async (ninjaId: number, banned: boolean) => {
-    setConfirmationModal({
-      isOpen: true,
-      title: banned ? 'Ban Ninja from Suggestions' : 'Unban Ninja from Suggestions',
-      message: banned
-        ? 'Are you sure you want to ban this ninja from suggesting questions?'
-        : 'Are you sure you want to unban this ninja from suggesting questions?',
-      confirmText: banned ? 'Ban' : 'Unban',
-      cancelText: 'Cancel',
-      variant: banned ? 'warning' : 'info',
-      onConfirm: async () => {
-        setConfirmationModal({ ...confirmationModal, isOpen: false });
-        try {
-          const updatedNinja = await ninjaApi.banSuggestions(ninjaId, banned);
-          success(banned ? 'Ninja banned from suggestions' : 'Ninja unbanned from suggestions');
-          await loadPendingSuggestions();
-          await loadNinjas();
-          if (selectedNinja && selectedNinja.id === ninjaId) {
-            setSelectedNinja(prev => prev ? { ...prev, suggestionsBanned: updatedNinja.suggestionsBanned } : null);
-          }
-        } catch (error) {
-          showError(getErrorMessage(error, `Failed to ${banned ? 'ban' : 'unban'} ninja`));
-          console.error(error);
-        }
-      },
-    });
-  };
   useEffect(() => {
     if (activeTab === 'activity' && overviewSubTab === 'ledger') {
       loadLedgerTransactions();
@@ -819,111 +525,6 @@ export default function AdminDashboard({ onLogout }: Props) {
       showError('Failed to update availability');
       console.error(err);
     }
-  };
-
-  // big question management functions
-  // get monday because questions are weekly and start on monday
-  const getMondayOfWeek = (dateString: string): string => {
-    const date = new Date(dateString);
-    const day = date.getDay();
-    // sunday is 0, monday is 1, etc. math to get back to monday
-    const diff = day === 0 ? -6 : -(day - 1);
-    const monday = new Date(date);
-    monday.setDate(date.getDate() + diff);
-    return monday.toISOString().split('T')[0];
-  };
-
-  const handleCreateQuestion = () => {
-    setIsCreatingQuestion(true);
-    setEditingQuestion(null);
-    setSelectedSuggestionId(null);
-    const today = new Date().toISOString().split('T')[0];
-    setQuestionFormData({
-      ...createEmptyQuestionForm(),
-      questionDate: getMondayOfWeek(today),
-    });
-  };
-
-  const handleEditQuestion = (question: BigQuestion) => {
-    setEditingQuestion(question);
-    setIsCreatingQuestion(false);
-    setQuestionFormData({
-      questionDate: getMondayOfWeek(question.questionDate),
-      questionText: question.questionText,
-      questionType: question.questionType ?? 'MULTIPLE_CHOICE',
-      correctAnswer: question.correctAnswer || '',
-      correctChoiceIndex: question.correctChoiceIndex ?? 0,
-      choices: normalizeChoices(question.choices),
-    });
-  };
-
-  const handleSubmitQuestion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const data: CreateBigQuestionRequest = {
-        questionDate: questionFormData.questionDate,
-        questionText: questionFormData.questionText,
-        questionType: questionFormData.questionType,
-      };
-
-      if (questionFormData.questionType === 'MULTIPLE_CHOICE') {
-        data.choices = questionFormData.choices.filter(c => c.trim());
-        data.correctChoiceIndex = questionFormData.correctChoiceIndex;
-      } else {
-        data.correctAnswer = questionFormData.correctAnswer;
-      }
-
-      if (isCreatingQuestion) {
-        // if this came from a suggestion, include the id so it gets approved
-        if (selectedSuggestionId) {
-          data.suggestionId = selectedSuggestionId;
-        }
-        await bigQuestionApi.createQuestion(data);
-
-        if (selectedSuggestionId) {
-          await loadPendingSuggestions();
-          success('Question created and suggestion approved!');
-          setSelectedSuggestionId(null);
-        } else {
-          success('Question saved successfully!');
-        }
-      } else if (editingQuestion) {
-        await bigQuestionApi.updateQuestion(editingQuestion.id, data);
-        success('Question updated successfully!');
-      }
-
-      setIsCreatingQuestion(false);
-      setEditingQuestion(null);
-      loadQuestions();
-    } catch (err) {
-      showError('Failed to save question');
-      console.error(err);
-    }
-  };
-
-  const handleDeleteQuestion = async (id: number) => {
-    setConfirmationModal({
-      isOpen: true,
-      title: 'Delete Question',
-      message: 'Are you sure you want to permanently delete this question? This action cannot be undone.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      variant: 'warning',
-      onConfirm: async () => {
-        setConfirmationModal({ ...confirmationModal, isOpen: false });
-        try {
-          await bigQuestionApi.deleteQuestion(id);
-          success('Question deleted permanently');
-          loadQuestions();
-          if (showPast) {
-            loadPastQuestions();
-          }
-        } catch (err) {
-          showError('Failed to delete question');
-          console.error(err);
-        }
-      },
-    });
   };
 
   const handleRedeemPurchase = async (purchaseId: number, itemName: string) => {
@@ -1247,39 +848,6 @@ export default function AdminDashboard({ onLogout }: Props) {
     });
   };
 
-  const handleAnnouncementSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!announcementTitle.trim() || !announcementMessage.trim()) {
-      showError('Please fill in both title and message');
-      return;
-    }
-    if (!username) {
-      showError('Admin not found');
-      return;
-    }
-
-    showPasswordPrompt({
-      title: 'Send Announcement',
-      message: 'Enter your password to send this announcement to all users.',
-      confirmText: 'Send Announcement',
-      onSubmit: async (password) => {
-        setSendingAnnouncement(true);
-        try {
-          await adminApi.sendAnnouncement(announcementTitle, announcementMessage, username, password);
-          success('Announcement sent to all users!');
-          setAnnouncementTitle('');
-          setAnnouncementMessage('');
-          await loadAuditLogs();
-        } catch (error) {
-          console.error(error);
-          throw new Error(getErrorMessage(error, 'Failed to send announcement'));
-        } finally {
-          setSendingAnnouncement(false);
-        }
-      },
-    });
-  };
-
   // Calculate stats
   const totalBuxInCirculation = ninjas.reduce((sum, n) => sum + n.buxBalance, 0);
   const unredeemedCount = ninjas.reduce((sum, n) => sum + (n.unredeemedPurchases?.length || 0), 0);
@@ -1298,7 +866,7 @@ export default function AdminDashboard({ onLogout }: Props) {
     }
   }, [searchQuery, ninjaBeltFilter, ninjaLockedFilter, ninjaPage]);
 
-  if (loading && ninjas.length === 0 && shopItems.length === 0 && questions.length === 0) {
+  if (loading && ninjas.length === 0 && shopItems.length === 0) {
     return (
       <div className="admin-container">
         <div className="loading-spinner">Loading...</div>
@@ -1356,13 +924,6 @@ export default function AdminDashboard({ onLogout }: Props) {
           >
             <FiShoppingBag />
             Shop
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'question' ? 'active' : ''}`}
-            onClick={() => setActiveTab('question')}
-          >
-            <FiHelpCircle />
-            Questions
           </button>
           <button
             className={`tab-btn ${activeTab === 'achievements' ? 'active' : ''}`}
@@ -1456,13 +1017,6 @@ export default function AdminDashboard({ onLogout }: Props) {
                 Ledger
               </button>
               <button
-                className={`tab-btn ${overviewSubTab === 'announcement' ? 'active' : ''}`}
-                onClick={() => setOverviewSubTab('announcement')}
-                style={{ borderBottom: overviewSubTab === 'announcement' ? '3px solid var(--primary)' : '3px solid transparent' }}
-              >
-                Announcement
-              </button>
-              <button
                 className={`tab-btn ${overviewSubTab === 'ninja-logins' ? 'active' : ''}`}
                 onClick={() => setOverviewSubTab('ninja-logins')}
                 style={{ borderBottom: overviewSubTab === 'ninja-logins' ? '3px solid var(--primary)' : '3px solid transparent' }}
@@ -1546,44 +1100,6 @@ export default function AdminDashboard({ onLogout }: Props) {
                   </table>
                 </div>
               )}
-            </div>
-          )}
-
-          {overviewSubTab === 'announcement' && (
-            <div className="announcement-section" style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--gray-200)' }}>
-              <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 600 }}>Send Announcement</h3>
-              <form onSubmit={handleAnnouncementSubmit}>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Title</label>
-                  <input
-                    type="text"
-                    value={announcementTitle}
-                    onChange={(e) => setAnnouncementTitle(e.target.value)}
-                    placeholder="Announcement title"
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--gray-300)', fontSize: '0.9375rem' }}
-                    disabled={sendingAnnouncement}
-                  />
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Message</label>
-                  <textarea
-                    value={announcementMessage}
-                    onChange={(e) => setAnnouncementMessage(e.target.value)}
-                    placeholder="Announcement message"
-                    rows={3}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--gray-300)', fontSize: '0.9375rem', fontFamily: 'inherit', resize: 'vertical' }}
-                    disabled={sendingAnnouncement}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={sendingAnnouncement || !announcementTitle.trim() || !announcementMessage.trim()}
-                  style={{ opacity: (sendingAnnouncement || !announcementTitle.trim() || !announcementMessage.trim()) ? 0.6 : 1 }}
-                >
-                  {sendingAnnouncement ? 'Sending...' : 'Send Announcement'}
-                </button>
-              </form>
             </div>
           )}
 
@@ -1958,307 +1474,6 @@ export default function AdminDashboard({ onLogout }: Props) {
                 </div>
               </div>
             ))}
-          </div>
-        </>
-      )}
-
-      {/* BIG QUESTION TAB */}
-      {activeTab === 'question' && (
-        <>
-          <div className="section-header">
-            <h2>Question of the Week</h2>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={handleCreateQuestion} className="btn btn-primary">
-                <FiPlus /> Create Question
-              </button>
-              {pendingSuggestions.length > 0 && (
-                <button onClick={() => setShowSuggestions(!showSuggestions)} className="btn btn-secondary">
-                  {showSuggestions ? 'Hide Suggestions' : `View Suggestions (${pendingSuggestions.length})`}
-                </button>
-              )}
-              <button onClick={() => {
-                setShowPast(!showPast);
-                if (!showPast && pastQuestions.length === 0) {
-                  loadPastQuestions();
-                }
-              }} className="btn btn-secondary">
-                {showPast ? 'Hide Past Questions' : 'Show Past Questions'}
-              </button>
-            </div>
-          </div>
-
-          {/* Pending Suggestions Section */}
-          {showSuggestions && !isCreatingQuestion && !editingQuestion && <SuggestionReviewList
-            suggestions={pendingSuggestions}
-            onReject={handleRejectSuggestion}
-            onBan={handleBanSuggestions}
-          />}
-
-
-          {(isCreatingQuestion || editingQuestion) && (
-            <div className="modal-backdrop" onClick={() => { setIsCreatingQuestion(false); setEditingQuestion(null); setSelectedSuggestionId(null); }}>
-              <div style={{ display: 'flex', gap: '1rem', width: '100%', maxWidth: '1400px', margin: '0 auto' }}>
-                {/* Suggestions Sidebar */}
-                {pendingSuggestions.length > 0 && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ width: '300px', background: 'white', borderRadius: '8px', padding: '1rem', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-                  >
-                    <h4 style={{ marginBottom: '1rem', color: '#3B82F6' }}>Suggestions ({pendingSuggestions.length})</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {pendingSuggestions.map((suggestion) => {
-                        const question = suggestion.question || suggestion;
-                        const ninjaName = suggestion.ninjaName || (question.suggestedByNinjaId ? `(ID: ${question.suggestedByNinjaId})` : '');
-                        const isSelected = selectedSuggestionId === question.id;
-
-                        return (
-                          <div
-                            key={question.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUseSuggestion(question);
-                            }}
-                            style={{
-                              padding: '0.75rem',
-                              border: `2px solid ${isSelected ? '#3B82F6' : '#e5e7eb'}`,
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              background: isSelected ? '#eff6ff' : 'white',
-                              transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) e.currentTarget.style.borderColor = '#9ca3af';
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSelected) e.currentTarget.style.borderColor = '#e5e7eb';
-                            }}
-                          >
-                            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>
-                              By {ninjaName}
-                            </div>
-                            <div style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                              {question.questionText?.substring(0, 60)}
-                              {question.questionText && question.questionText.length > 60 ? '...' : ''}
-                            </div>
-                            {isSelected && (
-                              <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginTop: '0.25rem' }}>
-                                ✓ Selected
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Form */}
-                <div className="form-section modal" onClick={(e) => e.stopPropagation()} style={{ flex: 1 }}>
-                  <div className="form-section-header">
-                    <h3>{isCreatingQuestion ? 'Create New Question' : 'Edit Question'}</h3>
-                  </div>
-                  <form onSubmit={handleSubmitQuestion}>
-                <div className="form-grid">
-                  <div className="form-field">
-                    <label>Date</label>
-                    <input
-                      type="date"
-                      value={questionFormData.questionDate}
-                      onChange={(e) => {
-                        const selectedDate = e.target.value;
-                        const mondayDate = getMondayOfWeek(selectedDate);
-                        setQuestionFormData({ ...questionFormData, questionDate: mondayDate });
-                      }}
-                      required
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Question Type</label>
-                    <select
-                      value={questionFormData.questionType}
-                      onChange={(e) => setQuestionFormData({
-                        ...questionFormData,
-                        questionType: e.target.value as 'MULTIPLE_CHOICE'
-                      })}
-                      disabled
-                    >
-                      <option value="MULTIPLE_CHOICE">Multiple Choice</option>
-                    </select>
-                  </div>
-                  <div className="form-field full-width">
-                    <label>Question Text</label>
-                    <textarea
-                      value={questionFormData.questionText}
-                      onChange={(e) => setQuestionFormData({ ...questionFormData, questionText: e.target.value })}
-                      required
-                      rows={3}
-                    />
-                  </div>
-                  {questionFormData.questionType === 'MULTIPLE_CHOICE' && (
-                    <>
-                      <div className="form-field">
-                        <label>Choice 1</label>
-                        <input
-                          type="text"
-                          value={questionFormData.choices[0]}
-                          onChange={(e) => {
-                            const newChoices = [...questionFormData.choices];
-                            newChoices[0] = e.target.value;
-                            setQuestionFormData({ ...questionFormData, choices: newChoices });
-                          }}
-                        />
-                      </div>
-                      <div className="form-field">
-                        <label>Choice 2</label>
-                        <input
-                          type="text"
-                          value={questionFormData.choices[1]}
-                          onChange={(e) => {
-                            const newChoices = [...questionFormData.choices];
-                            newChoices[1] = e.target.value;
-                            setQuestionFormData({ ...questionFormData, choices: newChoices });
-                          }}
-                        />
-                      </div>
-                      <div className="form-field">
-                        <label>Choice 3</label>
-                        <input
-                          type="text"
-                          value={questionFormData.choices[2]}
-                          onChange={(e) => {
-                            const newChoices = [...questionFormData.choices];
-                            newChoices[2] = e.target.value;
-                            setQuestionFormData({ ...questionFormData, choices: newChoices });
-                          }}
-                        />
-                      </div>
-                      <div className="form-field">
-                        <label>Choice 4</label>
-                        <input
-                          type="text"
-                          value={questionFormData.choices[3]}
-                          onChange={(e) => {
-                            const newChoices = [...questionFormData.choices];
-                            newChoices[3] = e.target.value;
-                            setQuestionFormData({ ...questionFormData, choices: newChoices });
-                          }}
-                        />
-                      </div>
-                      <div className="form-field full-width">
-                        <label>Correct Choice</label>
-                        <select
-                          value={questionFormData.correctChoiceIndex}
-                          onChange={(e) => setQuestionFormData({ ...questionFormData, correctChoiceIndex: Number(e.target.value) })}
-                          required
-                        >
-                          <option value={0}>Choice 1</option>
-                          <option value={1}>Choice 2</option>
-                          <option value={2}>Choice 3</option>
-                          <option value={3}>Choice 4</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-                </div>
-                  <div className="form-actions">
-                    <button type="submit" className="btn btn-primary">Save</button>
-                    <button type="button" onClick={() => { setIsCreatingQuestion(false); setEditingQuestion(null); setSelectedSuggestionId(null); }} className="btn btn-secondary">Cancel</button>
-                  </div>
-                </form>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showPast && (
-            <div className="past-questions-section" style={{ marginBottom: '2rem' }}>
-              <h3 style={{ color: '#666', marginBottom: '1rem' }}>Past Questions</h3>
-              {pastQuestions.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', background: '#f8f9fa', borderRadius: '12px' }}>
-                  <p style={{ color: '#666' }}>No past questions found</p>
-                </div>
-              ) : (
-                <div className="questions-list">
-                  {pastQuestions.map((question) => (
-                    <div key={question.id} className="question-card" style={{ borderLeftColor: '#9ca3af' }}>
-                      <div className="question-header">
-                        <div>
-                          <h3>{new Date(question.questionDate).toLocaleDateString()}</h3>
-                          <span className={`type-badge ${question.questionType.toLowerCase()}`}>
-                            Multiple Choice
-                          </span>
-                        </div>
-                        <div className="question-actions">
-                          <button onClick={() => handleDeleteQuestion(question.id)} className="btn-icon" title="Delete">
-                            <FiTrash2 />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="question-text">{question.questionText}</p>
-                      {question.questionType === 'MULTIPLE_CHOICE' && question.choices && (
-                        <>
-                          <div className="choices-preview">
-                            {question.choices.map((choice, idx) => (
-                              <div key={idx} className={`choice-item ${idx === question.correctChoiceIndex ? 'correct-choice' : ''}`}>
-                                {idx + 1}. {choice}
-                              </div>
-                            ))}
-                          </div>
-                          <div className="answer-preview">
-                            <strong>Correct:</strong> Choice {(question.correctChoiceIndex ?? 0) + 1}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="questions-list">
-            {questions.length === 0 ? (
-              <div style={{ padding: '3rem', textAlign: 'center', background: '#f8f9fa', borderRadius: '12px', border: '2px dashed #d1d5db' }}>
-                <FiHelpCircle size={48} color="#9ca3af" style={{ marginBottom: '1rem' }} />
-                <p style={{ color: '#666', fontSize: '1rem', margin: 0 }}>No questions yet. Create your first question to get started!</p>
-              </div>
-            ) : (
-              questions.map((question) => (
-                <div key={question.id} className="question-card">
-                  <div className="question-header">
-                    <div>
-                      <h3>{new Date(question.questionDate).toLocaleDateString()}</h3>
-                      <span className={`type-badge ${question.questionType.toLowerCase()}`}>
-                        Multiple Choice
-                      </span>
-                    </div>
-                    <div className="question-actions">
-                      <button onClick={() => handleEditQuestion(question)} className="btn-icon" title="Edit">
-                        <FiEdit2 />
-                      </button>
-                      <button onClick={() => handleDeleteQuestion(question.id)} className="btn-icon" title="Delete">
-                        <FiTrash2 />
-                      </button>
-                    </div>
-                  </div>
-                  <p className="question-text">{question.questionText}</p>
-                  {question.questionType === 'MULTIPLE_CHOICE' && question.choices && (
-                    <>
-                      <div className="choices-preview">
-                        {question.choices.map((choice, idx) => (
-                          <div key={idx} className={`choice-item ${idx === question.correctChoiceIndex ? 'correct-choice' : ''}`}>
-                            {idx + 1}. {choice}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="answer-preview">
-                        <strong>Correct:</strong> Choice {(question.correctChoiceIndex ?? 0) + 1}
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))
-            )}
           </div>
         </>
       )}
@@ -2701,37 +1916,6 @@ export default function AdminDashboard({ onLogout }: Props) {
               {analytics.engagement && (
                 <div className="analytics-section">
                   <h3><FiTarget /> Engagement Metrics</h3>
-                  {analytics.engagement.quizMetrics && (
-                    <div className="metrics-subsection">
-                      <h4>Quiz Metrics</h4>
-                      <div className="analytics-grid">
-                        <div className="metric-card">
-                          <div className="metric-label">Total Questions</div>
-                          <div className="metric-value">{analytics.engagement.quizMetrics.totalQuestions || 0}</div>
-                        </div>
-                        <div className="metric-card">
-                          <div className="metric-label">Total Answers</div>
-                          <div className="metric-value">{analytics.engagement.quizMetrics.totalAnswers || 0}</div>
-                        </div>
-                        <div className="metric-card">
-                          <div className="metric-label">Average Accuracy</div>
-                          <div className="metric-value">
-                            {(analytics.engagement.quizMetrics.averageAccuracy || 0).toFixed(1)}%
-                          </div>
-                        </div>
-                        <div className="metric-card">
-                          <div className="metric-label">Participants This Week</div>
-                          <div className="metric-value">{analytics.engagement.quizMetrics.participantsThisWeek || 0}</div>
-                        </div>
-                        <div className="metric-card">
-                          <div className="metric-label">Participation Rate</div>
-                          <div className="metric-value">
-                            {(analytics.engagement.quizMetrics.participationRate || 0).toFixed(1)}%
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                   {analytics.engagement.shopMetrics && (
                     <div className="metrics-subsection">
                       <h4>Shop Metrics</h4>
@@ -3115,12 +2299,6 @@ export default function AdminDashboard({ onLogout }: Props) {
                   <div><strong>Total Earned:</strong> {formatBux(selectedNinja.totalBuxEarned)} Bux</div>
                   <div><strong>Total Spent:</strong> {formatBux(selectedNinja.totalBuxSpent)} Bux</div>
                   <div><strong>Current Balance:</strong> {formatBux(selectedNinja.buxBalance)} Bux</div>
-                  {selectedNinja.suggestionsBanned && (
-                    <div style={{ gridColumn: '1 / -1', background: '#fee2e2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #dc2626' }}>
-                      <strong style={{ color: '#dc2626', fontWeight: 600 }}>Suggestions Banned</strong>
-                      <span style={{ color: '#dc2626', display: 'block', marginTop: '0.25rem' }}>This ninja cannot suggest questions</span>
-                    </div>
-                  )}
                   {selectedNinja.isLocked && (
                     <div style={{ gridColumn: '1 / -1', background: '#fee2e2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #dc2626' }}>
                       <strong style={{ color: '#dc2626', fontWeight: 600 }}>Account Locked</strong>
@@ -3129,17 +2307,6 @@ export default function AdminDashboard({ onLogout }: Props) {
                       </span>
                     </div>
                   )}
-                </div>
-                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => {
-                      const isBanned = selectedNinja.suggestionsBanned || false;
-                      handleBanSuggestions(selectedNinja.id, !isBanned);
-                    }}
-                    className={`btn ${selectedNinja.suggestionsBanned ? 'btn-success' : 'btn-warning'}`}
-                  >
-                    {selectedNinja.suggestionsBanned ? 'Unban Suggestions' : 'Ban Suggestions'}
-                  </button>
                 </div>
               </div>
 

@@ -12,7 +12,9 @@ import com.example.NinjaBux.repository.LedgerTxnRepository;
 import com.example.NinjaBux.repository.LegacyLedgerTxnRepository;
 import com.example.NinjaBux.repository.NinjaRepository;
 import com.example.NinjaBux.util.AdminUtils;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -262,5 +264,64 @@ public class LedgerService extends NinjaServiceBase {
                 : String.format(
                     "Admin Legacy adjustment by %s: %+d Legacy", adminUsername, legacyAmount));
     return legacyLedgerTxnRepository.save(txn);
+  }
+
+  public Map<Long, Integer> getBuxBalances(List<Ninja> ninjas) {
+    if (ninjas.isEmpty()) {
+      return new HashMap<>();
+    }
+    List<Object[]> results = ledgerTxnRepository.sumAmountByNinjas(ninjas);
+    Map<Long, Integer> balanceMap = new HashMap<>();
+    for (Object[] result : results) {
+      Long ninjaId = (Long) result[0];
+      Number balance = (Number) result[1];
+      balanceMap.put(ninjaId, balance.intValue());
+    }
+    for (Ninja ninja : ninjas) {
+      balanceMap.putIfAbsent(ninja.getId(), 0);
+    }
+    return balanceMap;
+  }
+
+  public Map<Long, Integer> getTotalBuxEarnedBatch(List<Ninja> ninjas) {
+    if (ninjas.isEmpty()) {
+      return new HashMap<>();
+    }
+    List<Object[]> results = ledgerTxnRepository.sumEarnedAmountByNinjas(ninjas);
+    Map<Long, Integer> earnedMap = new HashMap<>();
+    for (Object[] result : results) {
+      Long ninjaId = (Long) result[0];
+      Number earned = (Number) result[1];
+      earnedMap.put(ninjaId, earned.intValue());
+    }
+    for (Ninja ninja : ninjas) {
+      earnedMap.putIfAbsent(ninja.getId(), 0);
+    }
+    return earnedMap;
+  }
+
+  public Map<Long, Integer> getTotalBuxSpentBatch(List<Ninja> ninjas) {
+    if (ninjas.isEmpty()) {
+      return new HashMap<>();
+    }
+    List<Object[]> results = ledgerTxnRepository.sumSpentAmountByNinjas(ninjas);
+    Map<Long, Integer> spentMap = new HashMap<>();
+    for (Object[] result : results) {
+      Long ninjaId = (Long) result[0];
+      Number spent = (Number) result[1];
+      spentMap.put(ninjaId, Math.abs(spent.intValue()));
+    }
+    for (Ninja ninja : ninjas) {
+      spentMap.putIfAbsent(ninja.getId(), 0);
+    }
+    return spentMap;
+  }
+
+  public int getTotalEarnedGlobal() {
+    return ledgerTxnRepository.sumTotalEarned();
+  }
+
+  public int getTotalSpentGlobal() {
+    return ledgerTxnRepository.sumTotalSpent();
   }
 }

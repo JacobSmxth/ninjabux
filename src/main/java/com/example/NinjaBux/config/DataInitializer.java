@@ -1,17 +1,11 @@
 package com.example.NinjaBux.config;
 
 import com.example.NinjaBux.domain.Achievement;
-import com.example.NinjaBux.domain.BigQuestion;
 import com.example.NinjaBux.domain.ShopItem;
 import com.example.NinjaBux.domain.enums.AchievementCategory;
 import com.example.NinjaBux.domain.enums.BadgeRarity;
 import com.example.NinjaBux.repository.AchievementRepository;
-import com.example.NinjaBux.repository.AdminRepository;
-import com.example.NinjaBux.repository.BigQuestionRepository;
 import com.example.NinjaBux.repository.ShopItemRepository;
-import com.example.NinjaBux.util.DateUtils;
-import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +23,6 @@ public class DataInitializer implements CommandLineRunner {
 
   @Autowired(required = false)
   private AchievementRepository achievementRepository;
-
-  @Autowired(required = false)
-  private BigQuestionRepository bigQuestionRepository;
-
-  @Autowired private AdminRepository adminRepository;
 
   @Autowired(required = false)
   private com.example.NinjaBux.repository.NinjaRepository ninjaRepository;
@@ -55,10 +44,6 @@ public class DataInitializer implements CommandLineRunner {
       initializeAchievements();
       // retroactively give veteran achievements to ninjas who already earned them
       awardVeteranAchievementsToExistingNinjas();
-    }
-
-    if (bigQuestionRepository != null && bigQuestionRepository.count() == 0) {
-      initializeQuestions();
     }
   }
 
@@ -198,30 +183,6 @@ public class DataInitializer implements CommandLineRunner {
             0);
     blueBelt.setUnlockCriteria("{\"type\":\"BELT_REACHED\",\"belt\":\"BLUE\"}");
     achievementRepository.save(blueBelt);
-
-    Achievement quizNovice =
-        new Achievement(
-            "Quiz Novice",
-            "Answer 10 questions correctly",
-            AchievementCategory.QUIZ,
-            BadgeRarity.COMMON,
-            "❓",
-            0);
-    quizNovice.setUnlockCriteria(
-        "{\"type\":\"QUIZ_ACCURACY\",\"threshold\":50,\"minimumQuestions\":10}");
-    achievementRepository.save(quizNovice);
-
-    Achievement perfectAccuracy =
-        new Achievement(
-            "Perfectionist",
-            "Maintain 100% quiz accuracy (minimum 5 questions)",
-            AchievementCategory.QUIZ,
-            BadgeRarity.EPIC,
-            "💎",
-            0);
-    perfectAccuracy.setUnlockCriteria(
-        "{\"type\":\"QUIZ_ACCURACY\",\"threshold\":100,\"minimumQuestions\":5}");
-    achievementRepository.save(perfectAccuracy);
 
     Achievement firstHundred =
         new Achievement(
@@ -375,28 +336,5 @@ public class DataInitializer implements CommandLineRunner {
     } catch (Exception e) {
       logger.error("Error awarding veteran achievements: {}", e.getMessage(), e);
     }
-  }
-
-  private void initializeQuestions() {
-    LocalDate today = LocalDate.now();
-    LocalDate weekStart = DateUtils.getWeekStart(today);
-    LocalDate weekEnd = DateUtils.getWeekEnd(today);
-
-    BigQuestion sampleQuestion = new BigQuestion();
-    sampleQuestion.setQuestionDate(weekStart);
-    sampleQuestion.setQuestionText("What is the primary purpose of a variable in programming?");
-    sampleQuestion.setQuestionType(BigQuestion.QuestionType.MULTIPLE_CHOICE);
-    sampleQuestion.setChoices(
-        Arrays.asList(
-            "To store and represent data",
-            "To print text to the screen",
-            "To make the code run faster",
-            "To delete unwanted code"));
-    sampleQuestion.setCorrectChoiceIndex(0);
-    sampleQuestion.setWeekStartDate(weekStart);
-    sampleQuestion.setWeekEndDate(weekEnd);
-    sampleQuestion.setActive(true);
-    sampleQuestion.setStatus(BigQuestion.QuestionStatus.APPROVED);
-    bigQuestionRepository.save(sampleQuestion);
   }
 }

@@ -8,7 +8,6 @@ import com.example.NinjaBux.dto.LeaderboardEntry;
 import com.example.NinjaBux.dto.LeaderboardResponse;
 import com.example.NinjaBux.repository.NinjaRepository;
 import com.example.NinjaBux.repository.ProgressHistoryRepository;
-import com.example.NinjaBux.repository.QuestionAnswerRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,8 +25,6 @@ public class NinjaLeaderboardService {
   @Autowired private NinjaRepository ninjaRepository;
 
   @Autowired private ProgressHistoryRepository progressHistoryRepository;
-
-  @Autowired private QuestionAnswerRepository questionAnswerRepository;
 
   @Autowired private LedgerService ledgerService;
 
@@ -47,18 +44,25 @@ public class NinjaLeaderboardService {
   }
 
   private LeaderboardResponse getLifetimeLeaderboard(int topN, Boolean excludeLocked) {
-    List<NinjaLedgerView> ledgerViews =
-        ninjaRepository.findAll().stream()
+    List<Ninja> ninjas = ninjaRepository.findAll().stream()
             .filter(ninja -> !excludeLocked || !ninja.isLocked())
-            .map(this::buildLedgerView)
+            .collect(Collectors.toList());
+
+    Map<Long, Integer> earnedMap = ledgerService.getTotalBuxEarnedBatch(ninjas);
+    Map<Long, Integer> spentMap = ledgerService.getTotalBuxSpentBatch(ninjas);
+
+    List<NinjaLedgerView> ledgerViews = ninjas.stream()
+            .map(ninja -> new NinjaLedgerView(
+                ninja,
+                earnedMap.getOrDefault(ninja.getId(), 0),
+                spentMap.getOrDefault(ninja.getId(), 0)))
             .collect(Collectors.toList());
 
     List<LeaderboardEntry> topEarners = buildTopEarners(ledgerViews, topN);
     List<LeaderboardEntry> topSpenders = buildTopSpenders(ledgerViews, topN);
 
     LeaderboardResponse response =
-        new LeaderboardResponse(
-            topEarners, topSpenders, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        new LeaderboardResponse(topEarners, topSpenders, new ArrayList<>(), new ArrayList<>());
     if (topEarners.isEmpty()) {
       response.setMessage("No users qualify for this leaderboard");
     }
@@ -107,26 +111,27 @@ public class NinjaLeaderboardService {
             .filter(entry -> entry != null)
             .collect(Collectors.toList());
 
-    List<NinjaLedgerView> ledgerViews =
-        ninjaRepository.findAll().stream()
+    List<Ninja> ninjasForSpenders = ninjaRepository.findAll().stream()
             .filter(n -> !excludeLocked || !n.isLocked())
-            .map(this::buildLedgerView)
+            .collect(Collectors.toList());
+    Map<Long, Integer> earnedMapForSpenders = ledgerService.getTotalBuxEarnedBatch(ninjasForSpenders);
+    Map<Long, Integer> spentMapForSpenders = ledgerService.getTotalBuxSpentBatch(ninjasForSpenders);
+    List<NinjaLedgerView> ledgerViews = ninjasForSpenders.stream()
+            .map(ninja -> new NinjaLedgerView(
+                ninja,
+                earnedMapForSpenders.getOrDefault(ninja.getId(), 0),
+                spentMapForSpenders.getOrDefault(ninja.getId(), 0)))
             .collect(Collectors.toList());
     List<LeaderboardEntry> topSpenders = buildTopSpenders(ledgerViews, topN);
 
     List<LeaderboardEntry> mostImproved =
         getMostImprovedLeaderboard(topN, startDate, excludeLocked);
 
-    List<LeaderboardEntry> quizChampions =
-        getQuizChampionsLeaderboard(topN, startDate, excludeLocked);
-
     LeaderboardResponse response =
-        new LeaderboardResponse(
-            topEarners, topSpenders, mostImproved, quizChampions, new ArrayList<>());
+        new LeaderboardResponse(topEarners, topSpenders, mostImproved, new ArrayList<>());
     if (topEarners.isEmpty()
         && topSpenders.isEmpty()
-        && mostImproved.isEmpty()
-        && quizChampions.isEmpty()) {
+        && mostImproved.isEmpty()) {
       response.setMessage("No users qualify for this leaderboard");
     }
     return response;
@@ -257,42 +262,6 @@ public class NinjaLeaderboardService {
     return entries;
   }
 
-  private List<LeaderboardEntry> getQuizChampionsLeaderboard(
-      int topN, LocalDateTime startDate, Boolean excludeLocked) {
-    List<Object[]> results = questionAnswerRepository.findQuizChampionsSince(startDate);
-
-    List<LeaderboardEntry> entries = new ArrayList<>();
-    for (int i = 0; i < Math.min(topN, results.size()); i++) {
-      Object[] result = results.get(i);
-      Long ninjaId = (Long) result[0];
-      Long correctCount = (Long) result[1];
-      Ninja ninja = ninjaRepository.findById(ninjaId).orElse(null);
-      if (ninja == null) {
-        continue;
-      }
-      if (excludeLocked && ninja.isLocked()) {
-        continue;
-      }
-      if (correctCount.intValue() == 0) {
-        continue;
-      }
-
-      LeaderboardEntry entry =
-          new LeaderboardEntry(
-              ninja.getId(),
-              ninja.getFirstName(),
-              ninja.getLastName(),
-              ninja.getUsername(),
-              ninja.getCurrentBeltType(),
-              correctCount.intValue(),
-              getRoundedSpent(ninja),
-              i + 1);
-      populateAchievements(entry);
-      entries.add(entry);
-    }
-    return entries;
-  }
-
   private void populateAchievements(LeaderboardEntry entry) {
     if (achievementService != null) {
       try {
@@ -359,12 +328,6 @@ public class NinjaLeaderboardService {
         earned,
         spent,
         rank);
-  }
-
-  private NinjaLedgerView buildLedgerView(Ninja ninja) {
-    int earned = ledgerService.getTotalBuxEarned(ninja.getId());
-    int spent = ledgerService.getTotalBuxSpent(ninja.getId());
-    return new NinjaLedgerView(ninja, earned, spent);
   }
 
   private int getRoundedSpent(Ninja ninja) {

@@ -33,18 +33,11 @@ public class Ninja {
   private LocalDateTime createdAt;
   private LocalDateTime lastProgressUpdate;
 
-  private int totalQuestionsAnswered = 0;
-  private int totalQuestionsCorrect = 0;
-
-  private boolean suggestionsBanned = false;
-
   private int legacyLessons = 0;
 
   private int totalLessons = 0;
 
   private boolean isLocked = false;
-
-  private boolean isInitialSetup;
 
   public Ninja() {}
 
@@ -61,27 +54,14 @@ public class Ninja {
     this.currentLesson = currentLesson;
     this.currentLevel = currentLevel;
     this.currentBeltType = currentBeltType;
-    this.totalQuestionsAnswered = 0;
-    this.totalQuestionsCorrect = 0;
     this.isLocked = false;
     setTimestamps();
-    isInitialSetup =
-        (getCurrentBeltType() == BeltType.WHITE
-            && getCurrentLevel() == 1
-            && getCurrentLesson() == 1);
   }
 
   @PrePersist
   public void setTimestamps() {
     this.createdAt = LocalDateTime.now();
     this.lastProgressUpdate = LocalDateTime.now();
-  }
-
-  public void recordAnswer(boolean correct) {
-    this.totalQuestionsAnswered++;
-    if (correct) {
-      this.totalQuestionsCorrect++;
-    }
   }
 
   public void lock() {
@@ -128,18 +108,6 @@ public class Ninja {
     return lastProgressUpdate;
   }
 
-  public int getTotalQuestionsAnswered() {
-    return totalQuestionsAnswered;
-  }
-
-  public int getTotalQuestionsCorrect() {
-    return totalQuestionsCorrect;
-  }
-
-  public boolean isSuggestionsBanned() {
-    return suggestionsBanned;
-  }
-
   public void setId(Long id) {
     this.id = id;
   }
@@ -174,26 +142,6 @@ public class Ninja {
 
   public void setLastProgressUpdate(LocalDateTime lastProgressUpdate) {
     this.lastProgressUpdate = lastProgressUpdate;
-  }
-
-  public void setTotalQuestionsAnswered(int totalQuestionsAnswered) {
-    this.totalQuestionsAnswered = totalQuestionsAnswered;
-  }
-
-  public void setTotalQuestionsCorrect(int totalQuestionsCorrect) {
-    this.totalQuestionsCorrect = totalQuestionsCorrect;
-  }
-
-  public void setSuggestionsBanned(boolean suggestionsBanned) {
-    this.suggestionsBanned = suggestionsBanned;
-  }
-
-  public void incrementQuestionsAnswered() {
-    this.totalQuestionsAnswered++;
-  }
-
-  public void incrementQuestionsCorrect() {
-    this.totalQuestionsCorrect++;
   }
 
   public int getLegacyLessons() {

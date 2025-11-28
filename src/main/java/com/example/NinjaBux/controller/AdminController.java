@@ -11,7 +11,6 @@ import com.example.NinjaBux.dto.ChangePasswordRequest;
 import com.example.NinjaBux.security.JwtUtil;
 import com.example.NinjaBux.service.AdminService;
 import com.example.NinjaBux.service.AdminAuditService;
-import com.example.NinjaBux.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -34,9 +32,6 @@ public class AdminController {
 
     @Autowired
     private AdminAuditService auditService;
-
-    @Autowired(required = false)
-    private NotificationService notificationService;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -244,41 +239,4 @@ public class AdminController {
         }
     }
 
-    @PostMapping("/announcement")
-    public ResponseEntity<?> sendAnnouncement(@RequestBody Map<String, String> request,
-                                               @RequestParam String currentAdminUsername,
-                                               @RequestParam String currentAdminPassword) {
-        Optional<Admin> currentAdminOpt = adminService.authenticate(
-            currentAdminUsername,
-            currentAdminPassword
-        );
-
-        if (currentAdminOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String title = request.get("title");
-        String message = request.get("message");
-
-        if (title == null || message == null || title.trim().isEmpty() || message.trim().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
-
-        if (notificationService != null) {
-            try {
-                notificationService.sendBroadcastAnnouncement(title, message);
-                try {
-                    auditService.log(currentAdminUsername, "ANNOUNCEMENT",
-                        "Sent announcement: " + title);
-                } catch (Exception e) {
-                    logger.error("Error logging announcement: {}", e.getMessage(), e);
-                }
-                return ResponseEntity.ok().build();
-            } catch (Exception e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-            }
-        }
-
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
-    }
 }

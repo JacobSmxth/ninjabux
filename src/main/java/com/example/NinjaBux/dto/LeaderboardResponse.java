@@ -6,7 +6,6 @@ public class LeaderboardResponse {
     private List<LeaderboardEntry> topEarners;
     private List<LeaderboardEntry> topSpenders;
     private List<LeaderboardEntry> mostImproved; // Weekly lessons completed
-    private List<LeaderboardEntry> quizChampions; // Weekly correct answers
     private List<LeaderboardEntry> streakLeaders; // Consecutive sessions
     private String message; // Optional message for empty states
 
@@ -18,12 +17,10 @@ public class LeaderboardResponse {
     }
 
     public LeaderboardResponse(List<LeaderboardEntry> topEarners, List<LeaderboardEntry> topSpenders,
-                               List<LeaderboardEntry> mostImproved, List<LeaderboardEntry> quizChampions,
-                               List<LeaderboardEntry> streakLeaders) {
+                               List<LeaderboardEntry> mostImproved, List<LeaderboardEntry> streakLeaders) {
         this.topEarners = topEarners;
         this.topSpenders = topSpenders;
         this.mostImproved = mostImproved;
-        this.quizChampions = quizChampions;
         this.streakLeaders = streakLeaders;
     }
 
@@ -45,13 +42,6 @@ public class LeaderboardResponse {
     }
     public void setMostImproved(List<LeaderboardEntry> mostImproved) {
         this.mostImproved = mostImproved;
-    }
-    public List<LeaderboardEntry> getQuizChampions() {
-        return quizChampions;
-    }
-
-    public void setQuizChampions(List<LeaderboardEntry> quizChampions) {
-        this.quizChampions = quizChampions;
     }
 
     public List<LeaderboardEntry> getStreakLeaders() {

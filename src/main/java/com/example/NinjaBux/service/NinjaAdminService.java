@@ -10,7 +10,6 @@ import com.example.NinjaBux.repository.NinjaLoginLogRepository;
 import com.example.NinjaBux.repository.NinjaRepository;
 import com.example.NinjaBux.repository.ProgressHistoryRepository;
 import com.example.NinjaBux.repository.PurchaseRepository;
-import com.example.NinjaBux.repository.QuestionAnswerRepository;
 import com.example.NinjaBux.util.AdminUtils;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,8 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class NinjaAdminService extends NinjaServiceBase {
-
-  @Autowired private QuestionAnswerRepository questionAnswerRepository;
 
   @Autowired private PurchaseRepository purchaseRepository;
 
@@ -38,9 +35,6 @@ public class NinjaAdminService extends NinjaServiceBase {
   @Autowired(required = false)
   private AchievementProgressRepository achievementProgressRepository;
 
-  @Autowired(required = false)
-  private NotificationService notificationService;
-
   @Transactional
   public void deleteNinja(Long ninjaId) {
     if (!ninjaRepository.existsById(ninjaId)) {
@@ -51,14 +45,6 @@ public class NinjaAdminService extends NinjaServiceBase {
 
     if (achievementProgressRepository != null) {
       achievementProgressRepository.deleteByNinja(ninja);
-    }
-
-    List<com.example.NinjaBux.domain.QuestionAnswer> answers =
-        questionAnswerRepository.findAll().stream()
-            .filter(qa -> qa.getNinja().getId().equals(ninjaId))
-            .collect(Collectors.toList());
-    if (!answers.isEmpty()) {
-      questionAnswerRepository.deleteAll(answers);
     }
 
     List<com.example.NinjaBux.domain.Purchase> purchases =
@@ -152,28 +138,10 @@ public class NinjaAdminService extends NinjaServiceBase {
   }
 
   @Transactional
-  public Ninja banSuggestions(Long ninjaId, boolean banned) {
-    Ninja ninja = findNinja(ninjaId);
-    ninja.setSuggestionsBanned(banned);
-    return ninjaRepository.save(ninja);
-  }
-
-  @Transactional
   public Ninja lockAccount(Long ninjaId, String reason, String adminUsername) {
     Ninja ninja = findNinja(ninjaId);
     ninja.setLocked(true);
     ninja = ninjaRepository.save(ninja);
-
-    if (notificationService != null) {
-      try {
-        String lockMessage =
-            reason != null && !reason.trim().isEmpty()
-                ? reason
-                : "Your account has been locked. Please get back to work!";
-        notificationService.sendLockNotification(ninjaId, lockMessage);
-      } catch (Exception ignored) {
-      }
-    }
 
     return ninja;
   }
@@ -183,13 +151,6 @@ public class NinjaAdminService extends NinjaServiceBase {
     Ninja ninja = findNinja(ninjaId);
     ninja.setLocked(false);
     ninja = ninjaRepository.save(ninja);
-
-    if (notificationService != null) {
-      try {
-        notificationService.sendUnlockNotification(ninjaId);
-      } catch (Exception ignored) {
-      }
-    }
 
     return ninja;
   }

@@ -8,7 +8,6 @@ import Dashboard from './pages/Dashboard';
 import Shop from './pages/Shop';
 import Leaderboard from './pages/Leaderboard';
 import AchievementGallery from './pages/AchievementGallery';
-import Quiz from './pages/Quiz';
 import Toast from './components/Toast';
 import { useToastContext } from './context/ToastContext';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -174,11 +173,6 @@ function AppContent() {
           <Route path="/leaderboard" element={
             <ProtectedRoute>
               <Leaderboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/quiz" element={
-            <ProtectedRoute>
-              <Quiz ninjaId={userId!} />
             </ProtectedRoute>
           } />
           <Route path="*" element={

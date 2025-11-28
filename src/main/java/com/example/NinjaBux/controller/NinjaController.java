@@ -48,6 +48,18 @@ public class NinjaController {
 
   @Autowired private LedgerService ledgerService;
 
+  private NinjaResponse toResponse(Ninja ninja) {
+    int buxBalance = ledgerService.getBuxBalance(ninja.getId());
+    int legacyBalance = ledgerService.getLegacyBalance(ninja.getId());
+    int totalEarned = ledgerService.getTotalBuxEarned(ninja.getId());
+    int totalSpent = ledgerService.getTotalBuxSpent(ninja.getId());
+
+    NinjaResponse response = new NinjaResponse(ninja, buxBalance, legacyBalance);
+    response.setTotalBuxEarned(totalEarned);
+    response.setTotalBuxSpent(totalSpent);
+    return response;
+  }
+
   @PostMapping
   public ResponseEntity<NinjaResponse> createNinja(
       @RequestBody CreateNinjaRequest request,
@@ -67,7 +79,7 @@ public class NinjaController {
         "Created ninja: " + ninja.getFirstName() + " " + ninja.getLastName(),
         ninja.getId(),
         ninja.getFirstName() + " " + ninja.getLastName());
-    return ResponseEntity.status(HttpStatus.CREATED).body(new NinjaResponse(ninja, ledgerService));
+    return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ninja));
   }
 
   @GetMapping
@@ -102,7 +114,7 @@ public class NinjaController {
       response.put(
           "content",
           ninjaPage.getContent().stream()
-              .map(n -> new NinjaResponse(n, ledgerService))
+              .map(this::toResponse)
               .collect(Collectors.toList()));
       response.put("totalElements", ninjaPage.getTotalElements());
       response.put("totalPages", ninjaPage.getTotalPages());
@@ -114,7 +126,7 @@ public class NinjaController {
     }
     List<Ninja> ninjas = ninjaQueryService.getAllNinjas();
     List<NinjaResponse> responses =
-        ninjas.stream().map(n -> new NinjaResponse(n, ledgerService)).collect(Collectors.toList());
+        ninjas.stream().map(this::toResponse).collect(Collectors.toList());
     return ResponseEntity.ok(responses);
   }
 
@@ -122,7 +134,7 @@ public class NinjaController {
   public ResponseEntity<NinjaResponse> getNinja(@PathVariable Long id) {
     Optional<Ninja> ninja = ninjaQueryService.getNinja(id);
     return ninja
-        .map(n -> ResponseEntity.ok(new NinjaResponse(n, ledgerService)))
+        .map(n -> ResponseEntity.ok(toResponse(n)))
         .orElse(ResponseEntity.notFound().build());
   }
 
@@ -143,7 +155,7 @@ public class NinjaController {
             request.getBeltType(), request.getLevel(), request.getLesson()),
         updatedNinja.getId(),
         updatedNinja.getFirstName() + " " + updatedNinja.getLastName());
-    return ResponseEntity.ok(new NinjaResponse(updatedNinja, ledgerService));
+    return ResponseEntity.ok(toResponse(updatedNinja));
   }
 
   @GetMapping("/login/{username}")
@@ -151,7 +163,7 @@ public class NinjaController {
     try {
       Optional<Ninja> ninja = ninjaQueryService.getNinjaByUsername(username);
       return ninja
-          .map(n -> ResponseEntity.ok(new NinjaResponse(n, ledgerService)))
+          .map(n -> ResponseEntity.ok(toResponse(n)))
           .orElse(ResponseEntity.notFound().build());
     } catch (com.example.NinjaBux.exception.AccountLockedException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -180,7 +192,7 @@ public class NinjaController {
         "Updated ninja details",
         updatedNinja.getId(),
         updatedNinja.getFirstName() + " " + updatedNinja.getLastName());
-    return ResponseEntity.ok(new NinjaResponse(updatedNinja, ledgerService));
+    return ResponseEntity.ok(toResponse(updatedNinja));
   }
 
   @DeleteMapping("/{id}")
@@ -245,7 +257,7 @@ public class NinjaController {
           "Awarded " + amount + " Bux" + (notes != null ? ": " + notes : ""),
           updatedNinja.getId(),
           updatedNinja.getFirstName() + " " + updatedNinja.getLastName());
-      return ResponseEntity.ok(new NinjaResponse(updatedNinja, ledgerService));
+      return ResponseEntity.ok(toResponse(updatedNinja));
     } catch (RuntimeException e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
@@ -266,7 +278,7 @@ public class NinjaController {
           "Deducted " + amount + " Bux" + (notes != null ? ": " + notes : ""),
           updatedNinja.getId(),
           updatedNinja.getFirstName() + " " + updatedNinja.getLastName());
-      return ResponseEntity.ok(new NinjaResponse(updatedNinja, ledgerService));
+      return ResponseEntity.ok(toResponse(updatedNinja));
     } catch (RuntimeException e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
@@ -286,7 +298,7 @@ public class NinjaController {
           "Locked account" + (reason != null ? ": " + reason : ""),
           updatedNinja.getId(),
           updatedNinja.getFirstName() + " " + updatedNinja.getLastName());
-      return ResponseEntity.ok(new NinjaResponse(updatedNinja, ledgerService));
+      return ResponseEntity.ok(toResponse(updatedNinja));
     } catch (NinjaNotFoundException e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND)
           .body(java.util.Map.of("message", e.getMessage()));
@@ -312,7 +324,7 @@ public class NinjaController {
           "Unlocked account",
           updatedNinja.getId(),
           updatedNinja.getFirstName() + " " + updatedNinja.getLastName());
-      return ResponseEntity.ok(new NinjaResponse(updatedNinja, ledgerService));
+      return ResponseEntity.ok(toResponse(updatedNinja));
     } catch (NinjaNotFoundException e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND)
           .body(java.util.Map.of("message", e.getMessage()));
@@ -343,7 +355,7 @@ public class NinjaController {
               request.getBeltType(), request.getLevel(), request.getLesson()),
           updatedNinja.getId(),
           updatedNinja.getFirstName() + " " + updatedNinja.getLastName());
-      return ResponseEntity.ok(new NinjaResponse(updatedNinja, ledgerService));
+      return ResponseEntity.ok(toResponse(updatedNinja));
     } catch (RuntimeException e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
@@ -394,26 +406,6 @@ public class NinjaController {
       return ResponseEntity.ok(new ProgressHistoryResponse(correction));
     } catch (RuntimeException e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-    }
-  }
-
-  @PostMapping("/{id}/ban-suggestions")
-  public ResponseEntity<NinjaResponse> banSuggestions(
-      @PathVariable Long id,
-      @RequestParam boolean banned,
-      @RequestHeader(value = "X-Admin-Username", required = false, defaultValue = "admin")
-          String adminUsername) {
-    try {
-      Ninja updatedNinja = ninjaAdminService.banSuggestions(id, banned);
-      auditService.log(
-          adminUsername,
-          banned ? "BAN_SUGGESTIONS" : "UNBAN_SUGGESTIONS",
-          (banned ? "Banned" : "Unbanned") + " ninja from suggesting questions",
-          updatedNinja.getId(),
-          updatedNinja.getFirstName() + " " + updatedNinja.getLastName());
-      return ResponseEntity.ok(new NinjaResponse(updatedNinja, ledgerService));
-    } catch (RuntimeException e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
   }
 }

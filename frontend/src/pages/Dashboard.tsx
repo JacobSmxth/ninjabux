@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ninjaApi, shopApi, bigQuestionApi, achievementApi } from '../services/api';
-import type { Ninja, Purchase, BigQuestionResponse, ProgressHistory, AchievementProgress } from '../types';
-import { FiAward, FiHelpCircle, FiDollarSign } from 'react-icons/fi';
+import { ninjaApi, shopApi, achievementApi } from '../services/api';
+import type { Ninja, Purchase, ProgressHistory, AchievementProgress } from '../types';
+import { FiAward, FiDollarSign } from 'react-icons/fi';
 import { useLockContext } from '../context/LockContext';
 import AchievementIcon from '../components/AchievementIcon';
 import { getBeltTheme, defaultBeltTheme } from '../utils/beltTheme';
@@ -20,13 +19,11 @@ interface Props {
 }
 
 export default function Dashboard({ ninjaId }: Props) {
-  const navigate = useNavigate();
   const { setLockStatus } = useLockContext();
   const [ninja, setNinja] = useState<Ninja | null>(null);
   const [unredeemedPurchases, setUnredeemedPurchases] = useState<Purchase[]>([]);
   const [allPurchases, setAllPurchases] = useState<Purchase[]>([]);
   const [progressHistory, setProgressHistory] = useState<ProgressHistory[]>([]);
-  const [bigQuestion, setBigQuestion] = useState<BigQuestionResponse | null>(null);
   const [topAchievements, setTopAchievements] = useState<AchievementProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -47,14 +44,6 @@ export default function Dashboard({ ninjaId }: Props) {
       setProgressHistory(historyData);
       setTopAchievements(achievementsData);
       setError('');
-
-      try {
-        const questionData = await bigQuestionApi.getThisWeeksQuestion(ninjaId);
-        setBigQuestion(questionData ?? null);
-      } catch (questionError) {
-        console.error('Error loading question:', questionError);
-        setBigQuestion(null);
-      }
     } catch (error) {
       if (error instanceof Error && ('response' in error ? (error as any).response?.status === 403 : error.message.includes('Account is locked'))) {
         const errorMsg = (error as any)?.response?.data?.message || error.message || 'Account is locked';
@@ -90,39 +79,10 @@ export default function Dashboard({ ninjaId }: Props) {
     );
   }
 
-  const headerAction = (
-    <button
-      onClick={() => navigate('/quiz')}
-      style={{
-        background: '#000000',
-        color: '#ffffff',
-        border: '1px solid rgba(15, 23, 42, 0.15)',
-        padding: '0.75rem 1.5rem',
-        borderRadius: '12px',
-        fontSize: '1rem',
-        fontWeight: bigQuestion && !bigQuestion.hasAnswered ? 700 : 600,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        boxShadow: '0 0 18px rgba(107, 114, 128, 0.35)',
-        animation: bigQuestion && !bigQuestion.hasAnswered ? 'pulse-glow-belt 2s ease-in-out infinite' : 'none',
-        '--belt-color': '#737373',
-        '--belt-color-rgba-50': 'rgba(115, 115, 115, 0.5)',
-        '--belt-color-rgba-80': 'rgba(115, 115, 115, 0.8)',
-        '--belt-color-rgba-30': 'rgba(115, 115, 115, 0.3)',
-      } as React.CSSProperties}
-    >
-      <FiHelpCircle size={bigQuestion && !bigQuestion.hasAnswered ? 20 : 18} />
-      {bigQuestion && !bigQuestion.hasAnswered ? 'ANSWER QUESTION!' : 'Quiz'}
-    </button>
-  );
-
   return (
     <PageLayout
       title={`${ninja.firstName} ${ninja.lastName}`}
       eyebrow={`Level ${ninja.currentLevel}, Lesson ${ninja.currentLesson}`}
-      actions={headerAction}
       containerClass="dashboard-container"
       containerStyle={{
         '--accent': beltTheme.primary,

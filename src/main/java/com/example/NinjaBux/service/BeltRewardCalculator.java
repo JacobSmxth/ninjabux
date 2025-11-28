@@ -1,15 +1,15 @@
 package com.example.NinjaBux.service;
 
+import com.example.NinjaBux.config.RewardConfig;
 import com.example.NinjaBux.domain.belt.BeltSpec;
 import com.example.NinjaBux.domain.enums.BeltType;
 import org.springframework.stereotype.Service;
 
 @Service
 public class BeltRewardCalculator {
-  private static final int STARTING_BALANCE = 0;
 
   public int calculateBalance(BeltType beltType, int currentLevel, int currentLesson) {
-    int totalBux = STARTING_BALANCE;
+    int totalBux = RewardConfig.STARTING_BALANCE;
     totalBux += getCompletedBeltsReward(beltType);
     totalBux += getCurrentBeltProgress(beltType, currentLevel, currentLesson);
     return totalBux;

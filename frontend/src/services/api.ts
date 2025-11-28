@@ -1,5 +1,5 @@
 import axios, { type AxiosError } from 'axios';
-import type { Ninja, ShopItem, Purchase, CreateNinjaRequest, UpdateProgressRequest, PurchaseRequest, Admin, AdminLoginRequest, UpdateNinjaRequest, LeaderboardResponse, BigQuestion, BigQuestionResponse, CreateBigQuestionRequest, AnswerBigQuestionRequest, SuggestQuestionRequest, CreateShopItemRequest, ProgressHistory, ProgressHistoryCorrectionRequest, AdminAuditLog, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementProgress, CreateAchievementRequest, AwardAchievementRequest, AchievementCategory, PaginatedNinjaResponse, AnalyticsSnapshot, LedgerTransaction, NinjaLoginLog } from '../types';
+import type { Ninja, ShopItem, Purchase, CreateNinjaRequest, UpdateProgressRequest, PurchaseRequest, Admin, AdminLoginRequest, UpdateNinjaRequest, LeaderboardResponse, CreateShopItemRequest, ProgressHistory, ProgressHistoryCorrectionRequest, AdminAuditLog, CreateAdminByAdminRequest, ChangePasswordRequest, Achievement, AchievementProgress, CreateAchievementRequest, AwardAchievementRequest, AchievementCategory, PaginatedNinjaResponse, AnalyticsSnapshot, LedgerTransaction, NinjaLoginLog } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
   (import.meta.env.DEV && window.location.hostname === 'localhost' 
@@ -37,11 +37,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
-    const skipLogging = config.url?.includes('/big-question/week/');
-    if (!skipLogging) {
-      console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    }
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
@@ -52,26 +48,17 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    const skipLogging = response.config.url?.includes('/big-question/week/');
-    if (!skipLogging) {
-      console.log(`API Response: ${response.status} ${response.config.url}`);
-    }
+    console.log(`API Response: ${response.status} ${response.config.url}`);
     return response;
   },
   (error) => {
-    const isExpected404 = error.response?.status === 404 &&
-      error.config?.url?.includes('/big-question/week/');
-
-    // chatgpt told me this would work. it still logs errors sometimes.
-    if (!isExpected404) {
-      console.error('API Error:', error);
-      console.error('Error Message:', error.message);
-      console.error('Error Code:', error.code);
-      console.error('Error Response:', error.response);
-      console.error('Error Data:', error.response?.data);
-      console.error('Request URL:', error.config?.url);
-      console.error('Request Method:', error.config?.method);
-    }
+    console.error('API Error:', error);
+    console.error('Error Message:', error.message);
+    console.error('Error Code:', error.code);
+    console.error('Error Response:', error.response);
+    console.error('Error Data:', error.response?.data);
+    console.error('Request URL:', error.config?.url);
+    console.error('Request Method:', error.config?.method);
 
     if (!error.response) {
       if (error.code === 'ECONNABORTED') {
@@ -195,14 +182,6 @@ export const ninjaApi = {
   rebuildLeaderboard: async (): Promise<{ message: string }> => {
     const adminUsername = localStorage.getItem('adminUsername');
     const response = await api.post<{ message: string }>('/ninjas/leaderboard/rebuild', {}, {
-      headers: adminUsername ? { 'X-Admin-Username': adminUsername } : {},
-    });
-    return response.data;
-  },
-
-  banSuggestions: async (id: number, banned: boolean): Promise<Ninja> => {
-    const adminUsername = localStorage.getItem('adminUsername');
-    const response = await api.post<Ninja>(`/ninjas/${id}/ban-suggestions?banned=${banned}`, {}, {
       headers: adminUsername ? { 'X-Admin-Username': adminUsername } : {},
     });
     return response.data;
@@ -398,13 +377,6 @@ export const adminApi = {
     );
   },
 
-  sendAnnouncement: async (title: string, message: string, currentAdminUsername: string, currentAdminPassword: string): Promise<void> => {
-    await api.post(
-      `/admin/announcement?currentAdminUsername=${encodeURIComponent(currentAdminUsername)}&currentAdminPassword=${encodeURIComponent(currentAdminPassword)}`,
-      { title, message }
-    );
-  },
-
   getNinjaLoginLogs: async (limit: number = 100): Promise<NinjaLoginLog[]> => {
     const response = await api.get<NinjaLoginLog[]>(`/admin/ninja-login-logs?limit=${limit}`);
     return response.data;
@@ -412,100 +384,6 @@ export const adminApi = {
 
   getByUsername: async (username: string): Promise<Admin> => {
     const response = await api.get<Admin>(`/admin/by-username/${encodeURIComponent(username)}`);
-    return response.data;
-  },
-};
-
-export const bigQuestionApi = {
-  getThisWeeksQuestion: async (ninjaId: number): Promise<BigQuestionResponse | null> => {
-    try {
-      // validateStatus because axios hates 404s for some reason
-      const response = await api.get<BigQuestionResponse>(`/big-question/week/${ninjaId}`, {
-        validateStatus: (status) => status === 200 || status === 404
-      });
-      
-      // null means no question exists, which is fine
-      if (response.status === 404) {
-        return null;
-      }
-      
-      return response.data;
-    } catch (error) {
-      // catch everything else and return null because errors are scary
-      console.error('Unexpected error loading question:', error);
-      return null;
-    }
-  },
-
-  getTodaysQuestion: async (ninjaId: number): Promise<BigQuestionResponse | null> => {
-    // old api endpoint, redirect to weekly because we changed the system
-    return bigQuestionApi.getThisWeeksQuestion(ninjaId);
-  },
-
-  suggestQuestion: async (data: SuggestQuestionRequest): Promise<BigQuestion> => {
-    const response = await api.post<BigQuestion>('/big-question/suggest', data);
-    return response.data;
-  },
-
-  getPendingSuggestions: async (): Promise<BigQuestion[]> => {
-    const response = await api.get<BigQuestion[]>('/big-question/pending');
-    return response.data;
-  },
-
-  getMySuggestions: async (ninjaId: number): Promise<BigQuestion[]> => {
-    const response = await api.get<BigQuestion[]>(`/big-question/my-suggestions/${ninjaId}`);
-    return response.data;
-  },
-
-  approveQuestion: async (id: number, data: { adminUsername: string }): Promise<BigQuestion> => {
-    const adminUsername = localStorage.getItem('adminUsername');
-    const response = await api.post<BigQuestion>(`/big-question/${id}/approve`, data, {
-      headers: { 'X-Admin-Username': adminUsername || '' },
-    });
-    return response.data;
-  },
-
-  rejectQuestion: async (id: number, data: { adminUsername: string; reason?: string }): Promise<BigQuestion> => {
-    const adminUsername = localStorage.getItem('adminUsername');
-    const response = await api.post<BigQuestion>(`/big-question/${id}/reject`, data, {
-      headers: { 'X-Admin-Username': adminUsername || '' },
-    });
-    return response.data;
-  },
-
-  submitAnswer: async (questionId: number, data: AnswerBigQuestionRequest): Promise<void> => {
-    await api.post(`/big-question/${questionId}/answer`, data);
-  },
-
-  getAllQuestions: async (): Promise<BigQuestion[]> => {
-    const response = await api.get<BigQuestion[]>('/big-question/all');
-    return response.data;
-  },
-
-  getQuestionById: async (id: number): Promise<BigQuestion> => {
-    const response = await api.get<BigQuestion>(`/big-question/${id}`);
-    return response.data;
-  },
-
-  createQuestion: async (data: CreateBigQuestionRequest): Promise<BigQuestion> => {
-    const adminUsername = localStorage.getItem('adminUsername');
-    const response = await api.post<BigQuestion>('/big-question', data, {
-      headers: adminUsername ? { 'X-Admin-Username': adminUsername } : {},
-    });
-    return response.data;
-  },
-
-  updateQuestion: async (id: number, data: CreateBigQuestionRequest): Promise<BigQuestion> => {
-    const response = await api.put<BigQuestion>(`/big-question/${id}`, data);
-    return response.data;
-  },
-
-  deleteQuestion: async (id: number): Promise<void> => {
-    await api.delete(`/big-question/${id}`);
-  },
-
-  getPastQuestions: async (): Promise<BigQuestion[]> => {
-    const response = await api.get<BigQuestion[]>('/big-question/past');
     return response.data;
   },
 };

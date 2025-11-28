@@ -26,9 +26,6 @@ public class NinjaProgressService extends NinjaServiceBase {
   @Autowired(required = false)
   private AchievementService achievementService;
 
-  @Autowired(required = false)
-  private NotificationService notificationService;
-
   @Transactional
   public Ninja createNinja(
       String firstName,
@@ -280,10 +277,6 @@ public class NinjaProgressService extends NinjaServiceBase {
       progressHistoryRepository.save(history);
     }
 
-    if (notificationService != null && (lessonComplete || buxGained > 0)) {
-      sendProgressNotifications(ninja, newBelt, newLevel, newLesson, beltUp, levelUp, buxGained);
-    }
-
     if (achievementService != null && buxGained > 0) {
       try {
         achievementService.checkAndUnlockAchievements(ninja.getId());
@@ -292,54 +285,6 @@ public class NinjaProgressService extends NinjaServiceBase {
     }
 
     return ninja;
-  }
-
-  private void sendProgressNotifications(
-      Ninja ninja,
-      BeltType newBelt,
-      int newLevel,
-      int newLesson,
-      boolean beltUp,
-      boolean levelUp,
-      int buxGained) {
-    try {
-      String ninjaName = ninja.getFirstName() + " " + ninja.getLastName();
-      if (!beltUp && !levelUp) {
-        notificationService.sendLessonCompleteNotification(
-            ninja.getId(), String.format("Completed lesson! Earned %d Bux", buxGained));
-        return;
-      }
-
-      java.util.Map<String, Object> data = new java.util.HashMap<>();
-      data.put("belt", newBelt.toString());
-      data.put("level", newLevel);
-      data.put("lesson", newLesson);
-      data.put("buxEarned", buxGained);
-      data.put("ninjaName", ninjaName);
-      data.put("ninjaId", ninja.getId());
-
-      notificationService.sendLevelUpNotification(
-          ninja.getId(),
-          String.format(
-              "%s Up! %s Belt Level %d - Earned %d Bux",
-              beltUp ? "Belt" : "Level", newBelt, newLevel, buxGained),
-          data);
-
-      if (beltUp) {
-        notificationService.sendBroadcastNinjaBeltUp(
-            ninja.getId(),
-            ninjaName,
-            String.format("%s earned their %s Belt! 🎉", ninjaName, newBelt),
-            data);
-      } else if (levelUp) {
-        notificationService.sendBroadcastNinjaLevelUp(
-            ninja.getId(),
-            ninjaName,
-            String.format("%s leveled up to %s Belt Level %d! 🎉", ninjaName, newBelt, newLevel),
-            data);
-      }
-    } catch (Exception ignored) {
-    }
   }
 
   private void checkAccountLocked(Ninja ninja) {

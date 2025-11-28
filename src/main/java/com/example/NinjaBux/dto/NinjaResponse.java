@@ -2,7 +2,6 @@ package com.example.NinjaBux.dto;
 
 import com.example.NinjaBux.domain.Ninja;
 import com.example.NinjaBux.domain.enums.BeltType;
-import com.example.NinjaBux.service.LedgerService;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
@@ -13,12 +12,11 @@ public class NinjaResponse {
     private String username;
     private int buxBalance;
     private int legacyBalance;
+    private int totalBuxEarned;
+    private int totalBuxSpent;
     private BeltType currentBeltType;
     private int currentLevel;
     private int currentLesson;
-    private int totalQuestionsAnswered;
-    private int totalQuestionsCorrect;
-    private boolean suggestionsBanned;
     @JsonProperty("isLocked")
     private boolean locked;
     private LocalDateTime createdAt;
@@ -26,29 +24,21 @@ public class NinjaResponse {
 
     public NinjaResponse() {}
 
-    public NinjaResponse(Ninja ninja, LedgerService ledgerService) {
+    public NinjaResponse(Ninja ninja, int buxBalance, int legacyBalance) {
         this.id = ninja.getId();
         this.firstName = ninja.getFirstName();
         this.lastName = ninja.getLastName();
         this.username = ninja.getUsername();
-        
-        if (ledgerService != null) {
-            this.buxBalance = ledgerService.getBuxBalance(ninja.getId());
-            this.legacyBalance = ledgerService.getLegacyBalance(ninja.getId());
-        }
+        this.buxBalance = buxBalance;
+        this.legacyBalance = legacyBalance;
+        this.totalBuxEarned = 0;
+        this.totalBuxSpent = 0;
         this.currentBeltType = ninja.getCurrentBeltType();
         this.currentLevel = ninja.getCurrentLevel();
         this.currentLesson = ninja.getCurrentLesson();
-        this.totalQuestionsAnswered = ninja.getTotalQuestionsAnswered();
-        this.totalQuestionsCorrect = ninja.getTotalQuestionsCorrect();
-        this.suggestionsBanned = ninja.isSuggestionsBanned();
         this.locked = ninja.isLocked();
         this.createdAt = ninja.getCreatedAt();
         this.lastProgressUpdate = ninja.getLastProgressUpdate();
-    }
-    
-    public NinjaResponse(Ninja ninja) {
-        this(ninja, null);
     }
 
     public Long getId() {
@@ -90,6 +80,19 @@ public class NinjaResponse {
     public void setLegacyBalance(int legacyBalance) {
         this.legacyBalance = legacyBalance;
     }
+    public int getTotalBuxEarned() {
+        return totalBuxEarned;
+    }
+    public void setTotalBuxEarned(int totalBuxEarned) {
+        this.totalBuxEarned = totalBuxEarned;
+    }
+
+    public int getTotalBuxSpent() {
+        return totalBuxSpent;
+    }
+    public void setTotalBuxSpent(int totalBuxSpent) {
+        this.totalBuxSpent = totalBuxSpent;
+    }
 
     public BeltType getCurrentBeltType() {
         return currentBeltType;
@@ -110,27 +113,6 @@ public class NinjaResponse {
     }
     public void setCurrentLesson(int currentLesson) {
         this.currentLesson = currentLesson;
-    }
-
-    public int getTotalQuestionsAnswered() {
-        return totalQuestionsAnswered;
-    }
-    public void setTotalQuestionsAnswered(int totalQuestionsAnswered) {
-        this.totalQuestionsAnswered = totalQuestionsAnswered;
-    }
-
-    public int getTotalQuestionsCorrect() {
-        return totalQuestionsCorrect;
-    }
-    public void setTotalQuestionsCorrect(int totalQuestionsCorrect) {
-        this.totalQuestionsCorrect = totalQuestionsCorrect;
-    }
-
-    public boolean isSuggestionsBanned() {
-        return suggestionsBanned;
-    }
-    public void setSuggestionsBanned(boolean suggestionsBanned) {
-        this.suggestionsBanned = suggestionsBanned;
     }
 
     public boolean isLocked() {

@@ -196,17 +196,9 @@ public class AnalyticsResponse {
     }
 
     public static class EngagementMetrics {
-        private QuizMetrics quizMetrics;
         private ShopMetrics shopMetrics;
         private LeaderboardMetrics leaderboardMetrics;
         private AchievementMetrics achievementMetrics;
-
-        public QuizMetrics getQuizMetrics() {
-            return quizMetrics;
-        }
-        public void setQuizMetrics(QuizMetrics quizMetrics) {
-            this.quizMetrics = quizMetrics;
-        }
 
         public ShopMetrics getShopMetrics() {
             return shopMetrics;
@@ -227,49 +219,6 @@ public class AnalyticsResponse {
         }
         public void setAchievementMetrics(AchievementMetrics achievementMetrics) {
             this.achievementMetrics = achievementMetrics;
-        }
-    }
-
-    public static class QuizMetrics {
-        private int totalQuestions;
-        private int totalAnswers;
-        private double averageAccuracy;
-        private int participantsThisWeek;
-        private double participationRate;
-
-        public int getTotalQuestions() {
-            return totalQuestions;
-        }
-        public void setTotalQuestions(int totalQuestions) {
-            this.totalQuestions = totalQuestions;
-        }
-
-        public int getTotalAnswers() {
-            return totalAnswers;
-        }
-        public void setTotalAnswers(int totalAnswers) {
-            this.totalAnswers = totalAnswers;
-        }
-
-        public double getAverageAccuracy() {
-            return averageAccuracy;
-        }
-        public void setAverageAccuracy(double averageAccuracy) {
-            this.averageAccuracy = averageAccuracy;
-        }
-
-        public int getParticipantsThisWeek() {
-            return participantsThisWeek;
-        }
-        public void setParticipantsThisWeek(int participantsThisWeek) {
-            this.participantsThisWeek = participantsThisWeek;
-        }
-
-        public double getParticipationRate() {
-            return participationRate;
-        }
-        public void setParticipationRate(double participationRate) {
-            this.participationRate = participationRate;
         }
     }
 

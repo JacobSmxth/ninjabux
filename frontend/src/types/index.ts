@@ -12,9 +12,6 @@ export interface Ninja {
   currentLevel: number;
   currentLesson: number;
   currentBeltType: BeltType;
-  totalQuestionsAnswered: number;
-  totalQuestionsCorrect: number;
-  suggestionsBanned?: boolean;
   isLocked?: boolean;
   lockReason?: string;
   lockedAt?: string;
@@ -111,67 +108,8 @@ export interface LeaderboardResponse {
   topEarners: LeaderboardEntry[];
   topSpenders: LeaderboardEntry[];
   mostImproved?: LeaderboardEntry[]; // Weekly lessons completed
-  quizChampions?: LeaderboardEntry[]; // Weekly correct answers
   streakLeaders?: LeaderboardEntry[]; // Consecutive sessions
   message?: string; // Optional message for empty states
-}
-
-export interface BigQuestion {
-  id: number;
-  questionDate: string;
-  questionText: string;
-  questionType: 'MULTIPLE_CHOICE' | 'SHORT_ANSWER';
-  correctAnswer?: string;
-  correctChoiceIndex?: number;
-  choices?: string[];
-  active: boolean;
-  // weekly questions have date ranges
-  weekStartDate?: string;
-  weekEndDate?: string;
-  // student suggestions have these fields
-  suggestedByNinjaId?: number;
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'DRAFT';
-  approvedByAdmin?: string;
-  rejectionReason?: string;
-  // admin view adds ninja name for display
-  ninjaName?: string;
-}
-
-export interface BigQuestionResponse {
-  id: number;
-  questionDate: string;
-  questionText: string;
-  questionType: 'MULTIPLE_CHOICE' | 'SHORT_ANSWER';
-  choices?: string[];
-  hasAnswered: boolean;
-  wasCorrect: boolean;
-  // weekly questions have date ranges
-  weekStartDate?: string;
-  weekEndDate?: string;
-}
-
-export interface CreateBigQuestionRequest {
-  questionDate: string;
-  questionText: string;
-  questionType: 'MULTIPLE_CHOICE' | 'SHORT_ANSWER';
-  correctAnswer?: string;
-  correctChoiceIndex?: number;
-  choices?: string[];
-  suggestionId?: number; // Optional: ID of suggestion being approved
-}
-
-export interface AnswerBigQuestionRequest {
-  ninjaId: number;
-  answer: string;
-}
-
-export interface SuggestQuestionRequest {
-  ninjaId: number;
-  questionText: string;
-  questionType: 'MULTIPLE_CHOICE' | 'SHORT_ANSWER';
-  correctAnswer?: string;
-  correctChoiceIndex?: number;
-  choices?: string[];
 }
 
 export interface CreateShopItemRequest {
@@ -344,14 +282,6 @@ export interface EconomyHealthMetrics {
   balanceDistribution?: BalanceDistributionSummary;
 }
 
-export interface QuizMetricsSummary {
-  totalQuestions?: number;
-  totalAnswers?: number;
-  averageAccuracy?: number;
-  participantsThisWeek?: number;
-  participationRate?: number;
-}
-
 export interface ShopMetricsSummary {
   totalPurchases?: number;
   totalPurchasesThisWeek?: number;
@@ -367,7 +297,6 @@ export interface AchievementMetricsSummary {
 }
 
 export interface EngagementMetricsSummary {
-  quizMetrics?: QuizMetricsSummary;
   shopMetrics?: ShopMetricsSummary;
   achievementMetrics?: AchievementMetricsSummary;
 }

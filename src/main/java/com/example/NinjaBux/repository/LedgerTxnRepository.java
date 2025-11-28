@@ -28,4 +28,22 @@ public interface LedgerTxnRepository extends JpaRepository<LedgerTxn, Long> {
     
     @Query("SELECT lt FROM LedgerTxn lt JOIN FETCH lt.ninja ORDER BY lt.createdAt DESC")
     List<LedgerTxn> findAllByOrderByCreatedAtDesc();
+
+    @Query("SELECT lt.ninja.id, COALESCE(SUM(lt.amount), 0) FROM LedgerTxn lt WHERE lt.ninja IN :ninjas GROUP BY lt.ninja.id")
+    List<Object[]> sumAmountByNinjas(@Param("ninjas") List<Ninja> ninjas);
+
+    @Query("SELECT lt.ninja.id, COALESCE(SUM(CASE WHEN lt.amount > 0 THEN lt.amount ELSE 0 END), 0) FROM LedgerTxn lt WHERE lt.ninja IN :ninjas GROUP BY lt.ninja.id")
+    List<Object[]> sumEarnedAmountByNinjas(@Param("ninjas") List<Ninja> ninjas);
+
+    @Query("SELECT lt.ninja.id, COALESCE(SUM(CASE WHEN lt.amount < 0 THEN lt.amount ELSE 0 END), 0) FROM LedgerTxn lt WHERE lt.ninja IN :ninjas GROUP BY lt.ninja.id")
+    List<Object[]> sumSpentAmountByNinjas(@Param("ninjas") List<Ninja> ninjas);
+
+    @Query("SELECT COALESCE(SUM(lt.amount), 0) FROM LedgerTxn lt")
+    int sumTotalCirculation();
+
+    @Query("SELECT COALESCE(SUM(CASE WHEN lt.amount > 0 THEN lt.amount ELSE 0 END), 0) FROM LedgerTxn lt")
+    int sumTotalEarned();
+
+    @Query("SELECT COALESCE(SUM(CASE WHEN lt.amount < 0 THEN ABS(lt.amount) ELSE 0 END), 0) FROM LedgerTxn lt")
+    int sumTotalSpent();
 }

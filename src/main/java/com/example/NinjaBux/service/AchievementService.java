@@ -36,9 +36,6 @@ public class AchievementService {
 
   @Autowired private AdminAuditService auditService;
 
-  @Autowired(required = false)
-  private NotificationService notificationService;
-
   @Autowired private LedgerService ledgerService;
 
   @Autowired private LegacyLedgerTxnRepository legacyLedgerTxnRepository;
@@ -339,25 +336,6 @@ public class AchievementService {
         ninja.getId(),
         ninja.getFirstName() + " " + ninja.getLastName());
 
-    if (notificationService != null) {
-      try {
-        java.util.Map<String, Object> achievementData = new java.util.HashMap<>();
-        achievementData.put("achievementId", achievement.getId());
-        achievementData.put("achievementName", achievement.getName());
-        achievementData.put("rarity", achievement.getRarity().toString());
-        achievementData.put("buxReward", achievement.getBuxReward());
-        achievementData.put("manuallyAwarded", true);
-        String message =
-            achievement.getBuxReward() > 0
-                ? String.format(
-                    "Awarded: %s! Earned %d Bux", achievement.getName(), achievement.getBuxReward())
-                : String.format("Awarded: %s!", achievement.getName());
-        notificationService.sendAchievementNotification(ninja.getId(), message, achievementData);
-      } catch (Exception e) {
-        logger.error("Error sending achievement notification: {}", e.getMessage());
-      }
-    }
-
     logger.info(
         "Achievement manually awarded: {} to ninja: {} by admin: {}",
         achievement.getName(),
@@ -446,26 +424,6 @@ public class AchievementService {
 
         newlyUnlocked.add(new AchievementProgressDTO(progress));
 
-        if (notificationService != null) {
-          try {
-            java.util.Map<String, Object> achievementData = new java.util.HashMap<>();
-            achievementData.put("achievementId", achievement.getId());
-            achievementData.put("achievementName", achievement.getName());
-            achievementData.put("rarity", achievement.getRarity().toString());
-            achievementData.put("buxReward", achievement.getBuxReward());
-            String message =
-                achievement.getBuxReward() > 0
-                    ? String.format(
-                        "Unlocked: %s! Earned %d Bux",
-                        achievement.getName(), achievement.getBuxReward())
-                    : String.format("Unlocked: %s!", achievement.getName());
-            notificationService.sendAchievementNotification(
-                ninja.getId(), message, achievementData);
-          } catch (Exception e) {
-            logger.error("Error sending achievement notification: {}", e.getMessage());
-          }
-        }
-
         logger.info(
             "Achievement auto-unlocked: {} for ninja: {}",
             achievement.getName(),
@@ -503,18 +461,6 @@ public class AchievementService {
               BeltType required = BeltType.valueOf(requiredBelt);
               yield ninja.getCurrentBeltType().ordinal() >= required.ordinal() ? 100 : 0;
             }
-            case "QUIZ_ACCURACY" -> {
-              int minQuestions =
-                  criteria.has("minimumQuestions") ? criteria.get("minimumQuestions").asInt() : 1;
-              if (ninja.getTotalQuestionsAnswered() < minQuestions) {
-                yield 0;
-              }
-              double accuracy =
-                  (double) ninja.getTotalQuestionsCorrect()
-                      / ninja.getTotalQuestionsAnswered()
-                      * 100;
-              yield (int) Math.min(100, (accuracy / threshold) * 100);
-            }
             case "TOTAL_BUX_EARNED" -> ledgerService.getTotalBuxEarned(ninja.getId());
             case "TOTAL_SPENT" -> ledgerService.getTotalBuxSpent(ninja.getId());
             case "LEGACY_POINTS" -> legacyLedgerTxnRepository.sumAmountByNinja(ninja);
@@ -543,8 +489,6 @@ public class AchievementService {
         case "LESSONS_COMPLETED" -> checkLessonsCompleted(ninja, criteria);
         case "LEVELS_COMPLETED" -> checkLevelsCompleted(ninja, criteria);
         case "BELT_REACHED" -> checkBeltReached(ninja, criteria);
-        case "QUIZ_ACCURACY" -> checkQuizAccuracy(ninja, criteria);
-        case "QUIZ_STREAK" -> checkQuizStreak(ninja, criteria);
         case "TOTAL_BUX_EARNED" -> checkTotalBuxEarned(ninja, criteria);
         case "PURCHASES_MADE" -> checkPurchasesMade(ninja, criteria);
         case "TOTAL_SPENT" -> checkTotalSpent(ninja, criteria);
@@ -580,25 +524,6 @@ public class AchievementService {
     String requiredBelt = criteria.get("belt").asText();
     return ninja.getCurrentBeltType().name().equals(requiredBelt)
         || ninja.getCurrentBeltType().ordinal() > BeltType.valueOf(requiredBelt).ordinal();
-  }
-
-  private boolean checkQuizAccuracy(Ninja ninja, JsonNode criteria) {
-    int minQuestions =
-        criteria.has("minimumQuestions") ? criteria.get("minimumQuestions").asInt() : 1;
-    double threshold = criteria.get("threshold").asDouble();
-
-    if (ninja.getTotalQuestionsAnswered() < minQuestions) {
-      return false;
-    }
-
-    double accuracy =
-        (double) ninja.getTotalQuestionsCorrect() / ninja.getTotalQuestionsAnswered() * 100;
-    return accuracy >= threshold;
-  }
-
-  private boolean checkQuizStreak(Ninja ninja, JsonNode criteria) {
-    logger.warn("Quiz streak achievement criteria not yet implemented");
-    return false;
   }
 
   private boolean checkTotalBuxEarned(Ninja ninja, JsonNode criteria) {
