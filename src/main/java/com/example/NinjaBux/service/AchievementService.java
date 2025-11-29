@@ -452,10 +452,10 @@ public class AchievementService {
           switch (type) {
             case "LESSONS_COMPLETED" ->
                 BeltRewardCalculator.calculateTotalLessons(
-                    ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getCurrentLesson());
+                    ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getCurrentLesson(), ninja.getBeltPath());
             case "LEVELS_COMPLETED" ->
                 BeltRewardCalculator.calculateTotalLevels(
-                    ninja.getCurrentBeltType(), ninja.getCurrentLevel());
+                    ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getBeltPath());
             case "BELT_REACHED" -> {
               String requiredBelt = criteria.get("belt").asText();
               BeltType required = BeltType.valueOf(requiredBelt);
@@ -463,7 +463,7 @@ public class AchievementService {
             }
             case "TOTAL_BUX_EARNED" -> ledgerService.getTotalBuxEarned(ninja.getId());
             case "TOTAL_SPENT" -> ledgerService.getTotalBuxSpent(ninja.getId());
-            case "LEGACY_POINTS" -> legacyLedgerTxnRepository.sumAmountByNinja(ninja);
+            case "LEGACY_POINTS" -> getLegacyPointsValue(ninja);
             default -> 0;
           };
 
@@ -508,7 +508,7 @@ public class AchievementService {
     int threshold = criteria.get("threshold").asInt();
     int completedLessons =
         BeltRewardCalculator.calculateTotalLessons(
-            ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getCurrentLesson());
+            ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getCurrentLesson(), ninja.getBeltPath());
     return completedLessons >= threshold;
   }
 
@@ -516,7 +516,7 @@ public class AchievementService {
     int threshold = criteria.get("threshold").asInt();
     int completedLevels =
         BeltRewardCalculator.calculateTotalLevels(
-            ninja.getCurrentBeltType(), ninja.getCurrentLevel());
+            ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getBeltPath());
     return completedLevels >= threshold;
   }
 
@@ -543,8 +543,15 @@ public class AchievementService {
 
   private boolean checkLegacyPoints(Ninja ninja, JsonNode criteria) {
     int threshold = criteria.get("threshold").asInt();
-    int rawLegacySum = legacyLedgerTxnRepository.sumAmountByNinja(ninja);
-    return rawLegacySum >= threshold;
+    return getLegacyPointsValue(ninja) >= threshold;
+  }
+
+  private int getLegacyPointsValue(Ninja ninja) {
+    int legacyPoints = ninja.getLegacyPoints();
+    if (legacyPoints > 0) {
+      return legacyPoints;
+    }
+    return legacyLedgerTxnRepository.sumAmountByNinja(ninja);
   }
 
   private void updateAchievementFromDTO(Achievement achievement, AchievementDTO dto) {

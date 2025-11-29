@@ -3,6 +3,8 @@ package com.example.NinjaBux.service;
 import com.example.NinjaBux.domain.Ninja;
 import com.example.NinjaBux.domain.ProgressHistory;
 import com.example.NinjaBux.domain.enums.BeltType;
+import com.example.NinjaBux.domain.enums.BeltPath;
+import com.example.NinjaBux.domain.enums.BeltPath;
 import com.example.NinjaBux.exception.AccountLockedException;
 import com.example.NinjaBux.exception.InvalidProgressException;
 import com.example.NinjaBux.exception.NinjaNotFoundException;
@@ -33,25 +35,38 @@ public class NinjaProgressService extends NinjaServiceBase {
       String username,
       BeltType beltType,
       Integer level,
-      Integer lesson) {
+      Integer lesson,
+      BeltPath beltPath) {
     BeltType startingBelt = beltType != null ? beltType : BeltType.WHITE;
     int startingLevel = level != null ? level : 1;
     int startingLesson = lesson != null ? lesson : 1;
+    BeltPath startingPath = beltPath != null ? beltPath : BeltPath.UNITY;
 
-    if (!beltRewardCalculator.isValidProgress(startingBelt, startingLevel, startingLesson)) {
+    if (!beltRewardCalculator.isValidProgress(startingBelt, startingLevel, startingLesson, startingPath)) {
       String errorMessage =
           beltRewardCalculator.getValidationErrorMessage(
-              startingBelt, startingLevel, startingLesson);
+              startingBelt, startingLevel, startingLesson, startingPath);
       throw new InvalidProgressException(errorMessage);
     }
 
     Ninja ninja =
         new Ninja(firstName, lastName, username, startingLesson, startingLevel, startingBelt);
+    ninja.setBeltPath(startingPath);
+
+    int lessonsCompleted =
+        BeltRewardCalculator.calculateTotalLessons(
+            startingBelt, startingLevel, startingLesson, startingPath);
+    int rawBalance = lessonsCompleted;
+    int computedBalance = lessonsCompleted;
+
+    ninja.setLegacyPoints(rawBalance);
     ninja = ninjaRepository.save(ninja);
 
-    int computedBalance =
-        beltRewardCalculator.calculateBalance(startingBelt, startingLevel, startingLesson);
     ledgerService.onboardNinjaWithLegacy(ninja.getId(), computedBalance);
+    ledgerService.grantLegacy(
+        ninja.getId(),
+        rawBalance,
+        String.format("Legacy points for onboarding (%d raw)", rawBalance));
 
     if (achievementService != null) {
       try {
@@ -64,8 +79,11 @@ public class NinjaProgressService extends NinjaServiceBase {
   }
 
   @Transactional
-  public Ninja updateProgress(Long ninjaId, BeltType newBelt, int newLevel, int newLesson) {
+  public Ninja updateProgress(Long ninjaId, BeltType newBelt, int newLevel, int newLesson, BeltPath beltPath) {
     Ninja ninja = findNinja(ninjaId);
+    if (beltPath != null) {
+      ninja.setBeltPath(beltPath);
+    }
     return applyProgressUpdate(ninja, newBelt, newLevel, newLesson);
   }
 
@@ -77,7 +95,8 @@ public class NinjaProgressService extends NinjaServiceBase {
       String username,
       BeltType beltType,
       Integer level,
-      Integer lesson) {
+      Integer lesson,
+      BeltPath beltPath) {
     Ninja ninja = findNinja(ninjaId);
 
     if (firstName != null) {
@@ -89,10 +108,13 @@ public class NinjaProgressService extends NinjaServiceBase {
     if (username != null) {
       ninja.setUsername(username);
     }
+    if (beltPath != null) {
+      ninja.setBeltPath(beltPath);
+    }
 
     ninja = ninjaRepository.save(ninja);
 
-    if (beltType != null || level != null || lesson != null) {
+    if (beltType != null || level != null || lesson != null || beltPath != null) {
       BeltType targetBelt = beltType != null ? beltType : ninja.getCurrentBeltType();
       int targetLevel = level != null ? level : ninja.getCurrentLevel();
       int targetLesson = lesson != null ? lesson : ninja.getCurrentLesson();
@@ -154,12 +176,13 @@ public class NinjaProgressService extends NinjaServiceBase {
 
   @Transactional
   public Ninja updateProgressWithCorrection(
-      Long ninjaId, BeltType newBelt, int newLevel, int newLesson, String adminUsername) {
+      Long ninjaId, BeltType newBelt, int newLevel, int newLesson, BeltPath beltPath, String adminUsername) {
     Ninja ninja = findNinja(ninjaId);
+    BeltPath path = beltPath != null ? beltPath : ninja.getBeltPath();
 
-    if (!beltRewardCalculator.isValidProgress(newBelt, newLevel, newLesson)) {
+    if (!beltRewardCalculator.isValidProgress(newBelt, newLevel, newLesson, path)) {
       String errorMessage =
-          beltRewardCalculator.getValidationErrorMessage(newBelt, newLevel, newLesson);
+          beltRewardCalculator.getValidationErrorMessage(newBelt, newLevel, newLesson, path);
       throw new InvalidProgressException(errorMessage);
     }
 
@@ -167,8 +190,10 @@ public class NinjaProgressService extends NinjaServiceBase {
     int oldLevel = ninja.getCurrentLevel();
     int oldLesson = ninja.getCurrentLesson();
 
-    int oldExpectedBalance = beltRewardCalculator.calculateBalance(oldBelt, oldLevel, oldLesson);
-    int newExpectedBalance = beltRewardCalculator.calculateBalance(newBelt, newLevel, newLesson);
+    ninja.setBeltPath(path);
+
+    int oldExpectedBalance = beltRewardCalculator.calculateBalance(oldBelt, oldLevel, oldLesson, path);
+    int newExpectedBalance = beltRewardCalculator.calculateBalance(newBelt, newLevel, newLesson, path);
     int balanceDifference = newExpectedBalance - oldExpectedBalance;
 
     ninja.setCurrentBeltType(newBelt);
@@ -197,10 +222,12 @@ public class NinjaProgressService extends NinjaServiceBase {
 
   private Ninja applyProgressUpdate(Ninja ninja, BeltType newBelt, int newLevel, int newLesson) {
     checkAccountLocked(ninja);
+    BeltPath beltPath =
+        ninja.getBeltPath() != null ? ninja.getBeltPath() : BeltPath.UNITY;
 
-    if (!beltRewardCalculator.isValidProgress(newBelt, newLevel, newLesson)) {
+    if (!beltRewardCalculator.isValidProgress(newBelt, newLevel, newLesson, beltPath)) {
       String errorMessage =
-          beltRewardCalculator.getValidationErrorMessage(newBelt, newLevel, newLesson);
+          beltRewardCalculator.getValidationErrorMessage(newBelt, newLevel, newLesson, beltPath);
       throw new InvalidProgressException(errorMessage);
     }
 

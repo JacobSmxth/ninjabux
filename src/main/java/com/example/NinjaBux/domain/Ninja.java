@@ -1,6 +1,7 @@
 package com.example.NinjaBux.domain;
 
 import com.example.NinjaBux.domain.enums.BeltType;
+import com.example.NinjaBux.domain.enums.BeltPath;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
@@ -30,10 +31,13 @@ public class Ninja {
   @Enumerated(EnumType.STRING)
   private BeltType currentBeltType;
 
+  @Enumerated(EnumType.STRING)
+  private BeltPath beltPath = BeltPath.UNITY;
+
   private LocalDateTime createdAt;
   private LocalDateTime lastProgressUpdate;
 
-  private int legacyLessons = 0;
+  private int legacyPoints = 0;
 
   private int totalLessons = 0;
 
@@ -54,6 +58,7 @@ public class Ninja {
     this.currentLesson = currentLesson;
     this.currentLevel = currentLevel;
     this.currentBeltType = currentBeltType;
+    this.beltPath = BeltPath.UNITY;
     this.isLocked = false;
     setTimestamps();
   }
@@ -99,6 +104,7 @@ public class Ninja {
   public BeltType getCurrentBeltType() {
     return currentBeltType;
   }
+  public BeltPath getBeltPath() { return beltPath != null ? beltPath : BeltPath.UNITY; }
 
   public LocalDateTime getCreatedAt() {
     return createdAt;
@@ -135,6 +141,7 @@ public class Ninja {
   public void setCurrentBeltType(BeltType currentBeltType) {
     this.currentBeltType = currentBeltType;
   }
+  public void setBeltPath(BeltPath beltPath) { this.beltPath = beltPath; }
 
   public void setCreatedAt(LocalDateTime createdAt) {
     this.createdAt = createdAt;
@@ -144,12 +151,12 @@ public class Ninja {
     this.lastProgressUpdate = lastProgressUpdate;
   }
 
-  public int getLegacyLessons() {
-    return legacyLessons;
+  public int getLegacyPoints() {
+    return legacyPoints;
   }
 
-  public void setLegacyLessons(int legacyLessons) {
-    this.legacyLessons = legacyLessons;
+  public void setLegacyPoints(int legacyPoints) {
+    this.legacyPoints = legacyPoints;
   }
 
   public int getTotalLessons() {

@@ -250,7 +250,7 @@ public class DataInitializer implements CommandLineRunner {
     helper.setManualOnly(true);
     achievementRepository.save(helper);
 
-    // veteran achievements based on raw legacy points before we divided by 10
+    // veteran achievements based on legacy points
     Achievement veteranI =
         new Achievement(
             "Veteran I",
@@ -266,24 +266,24 @@ public class DataInitializer implements CommandLineRunner {
     Achievement veteranII =
         new Achievement(
             "Veteran II",
-            "Accumulated 500+ legacy points",
+            "Accumulated 350+ legacy points",
             AchievementCategory.VETERAN,
             BadgeRarity.EPIC,
             "🎖️",
             10);
-    veteranII.setUnlockCriteria("{\"type\":\"LEGACY_POINTS\",\"threshold\":500}");
+    veteranII.setUnlockCriteria("{\"type\":\"LEGACY_POINTS\",\"threshold\":350}");
     veteranII.setHidden(true);
     achievementRepository.save(veteranII);
 
     Achievement veteranIII =
         new Achievement(
             "Veteran III",
-            "Accumulated 1000+ legacy points",
+            "Accumulated 700+ legacy points",
             AchievementCategory.VETERAN,
             BadgeRarity.LEGENDARY,
             "🎖️",
             25);
-    veteranIII.setUnlockCriteria("{\"type\":\"LEGACY_POINTS\",\"threshold\":1000}");
+    veteranIII.setUnlockCriteria("{\"type\":\"LEGACY_POINTS\",\"threshold\":700}");
     veteranIII.setHidden(true);
     achievementRepository.save(veteranIII);
   }
