@@ -17,12 +17,17 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
   const { showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp } = useToastContext();
 
   const toastFunctionsRef = useRef({ showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp });
+  const wsEnabled = import.meta.env.VITE_ENABLE_WS === 'true';
 
   useEffect(() => {
     toastFunctionsRef.current = { showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp };
   }, [showToast, lessonComplete, levelUp, achievement, announcement, ninjaLevelUp, ninjaBeltUp]);
 
   useEffect(() => {
+    if (!wsEnabled) {
+      return;
+    }
+
     const connect = () => {
       try {
         const wsUrl = import.meta.env.DEV && window.location.hostname === 'localhost'
@@ -152,7 +157,9 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
       }
     };
 
-    connect();
+    if (wsEnabled) {
+      connect();
+    }
 
     // Cleanup on unmount
     return () => {
@@ -160,5 +167,5 @@ export function useWebSocket(ninjaId: number | null, onLockStatusChange?: (isLoc
         clientRef.current.deactivate();
       }
     };
-  }, [ninjaId, onLockStatusChange]);
+  }, [ninjaId, onLockStatusChange, wsEnabled]);
 }

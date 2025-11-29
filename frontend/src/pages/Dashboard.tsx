@@ -45,8 +45,9 @@ export default function Dashboard({ ninjaId }: Props) {
       setTopAchievements(achievementsData);
       setError('');
     } catch (error) {
-      if (error instanceof Error && ('response' in error ? (error as any).response?.status === 403 : error.message.includes('Account is locked'))) {
-        const errorMsg = (error as any)?.response?.data?.message || error.message || 'Account is locked';
+      const err = error as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      if (err?.response?.status === 403 || err?.message?.includes('Account is locked')) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Account is locked';
         setLockStatus(true, errorMsg);
       }
       setError('Failed to load data');
@@ -54,7 +55,7 @@ export default function Dashboard({ ninjaId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [ninjaId]);
+  }, [ninjaId, setLockStatus]);
 
   useEffect(() => {
     loadData();
@@ -143,12 +144,8 @@ export default function Dashboard({ ninjaId }: Props) {
           <h2>Progress Timeline</h2>
           <div className="progress-timeline">
             {progressHistory.map((entry) => {
-              const entryType = entry.earningType === 'LEVEL_UP' ? 'Level Up'
-                : entry.earningType === 'QUIZ_REWARD' ? 'Quiz Reward'
-                : 'Admin Award';
-              const entryColor = entry.earningType === 'LEVEL_UP' ? beltTheme.textColor
-                : entry.earningType === 'QUIZ_REWARD' ? '#2563eb'
-                : '#16a34a';
+              const entryType = entry.earningType === 'LEVEL_UP' ? 'Level Up' : 'Admin Award';
+              const entryColor = entry.earningType === 'LEVEL_UP' ? beltTheme.textColor : '#16a34a';
 
               return (
                 <div key={entry.id} className="timeline-entry" style={{ borderLeftColor: entryColor }}>

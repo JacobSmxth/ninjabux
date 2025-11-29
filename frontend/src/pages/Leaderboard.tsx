@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { ninjaApi } from '../services/api';
 import type { LeaderboardResponse, LeaderboardEntry, BadgeRarity } from '../types';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
@@ -17,11 +17,7 @@ export default function Leaderboard() {
   const [period, setPeriod] = useState<TimePeriod>('week');
   const [expandedSection, setExpandedSection] = useState<LeaderboardSection | null>('earners');
 
-  useEffect(() => {
-    loadLeaderboard();
-  }, [period]);
-
-  const loadLeaderboard = async () => {
+  const loadLeaderboard = useCallback(async () => {
     try {
       setLoading(true);
       const data = await ninjaApi.getLeaderboard(10, period);
@@ -33,7 +29,11 @@ export default function Leaderboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [period]);
+
+  useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
 
   const getRarityGlowClass = (rarity: BadgeRarity) => {
     return `badge-glow rarity-${rarity}`;
@@ -198,7 +198,7 @@ export default function Leaderboard() {
             </div>
           )}
 
-          {expandedSection === 'improved' && (
+          {expandedSection === 'improved' && (period === 'week' || period === 'daily') && (
             <div className="leaderboard-section expanded">
               <div className="section-header" onClick={() => toggleSection('improved')}>
                 <h2>Most Improved <span className="section-subtitle">(Lessons Advanced)</span></h2>
@@ -248,14 +248,6 @@ export default function Leaderboard() {
                 </div>
               </div>
 
-              <div className="leaderboard-section collapsed">
-                <div className="section-header" onClick={() => toggleSection('improved')}>
-                  <h2>Most Improved <span className="section-subtitle">(Lessons Advanced)</span></h2>
-                  <button className="expand-toggle">
-                    <FiChevronDown size={20} />
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -279,7 +271,7 @@ export default function Leaderboard() {
               </div>
             )}
 
-            {expandedSection !== 'improved' && (
+            {expandedSection !== 'improved' && (period === 'week' || period === 'daily') && (
               <div className="leaderboard-section collapsed sidebar-button" onClick={() => toggleSection('improved')}>
                 <div className="section-header">
                   <h2>Most Improved</h2>

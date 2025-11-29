@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ninjaApi, shopApi, achievementApi } from '../services/api';
-import type { Ninja, Purchase, BeltType, ProgressHistory, AchievementProgress, ProgressHistoryCorrectionRequest } from '../types';
+import type { Ninja, Purchase, BeltType, ProgressHistory, AchievementProgress, ProgressHistoryCorrectionRequest, BeltPath } from '../types';
 import { beltOrder, getMaxLessonsForLevel, getMaxLevelsForBelt } from '../utils/ninjaProgress';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ProgressHistoryEditModal from '../components/ProgressHistoryEditModal';
@@ -52,25 +52,22 @@ export default function NinjaDetail() {
     onConfirm: () => {},
   });
 
-  useEffect(() => {
-    loadNinjaData();
-  }, [id]);
-
-  const loadNinjaData = async () => {
+  const loadNinjaData = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
       // admin check because they see hidden achievements
       const isAdmin = !!localStorage.getItem('adminToken') || !!localStorage.getItem('adminUsername');
-      
+
+      const ninjaId = parseInt(id);
       const [ninjaData, historyData, unredeemedData, allPurchasesData, achievementsData] = await Promise.all([
-        ninjaApi.getById(parseInt(id)),
-        ninjaApi.getProgressHistory(parseInt(id)),
-        shopApi.getUnredeemedPurchases(parseInt(id)),
-        shopApi.getNinjaPurchases(parseInt(id)),
-        achievementApi.getNinjaAchievements(parseInt(id), isAdmin).catch(() => []),
+        ninjaApi.getById(ninjaId),
+        ninjaApi.getProgressHistory(ninjaId),
+        shopApi.getUnredeemedPurchases(ninjaId),
+        shopApi.getNinjaPurchases(ninjaId),
+        achievementApi.getNinjaAchievements(ninjaId, isAdmin).catch(() => []),
       ]);
-      
+
       // filter hidden achievements unless admin because mystery
       const filteredAchievements = isAdmin 
         ? achievementsData 
@@ -91,21 +88,27 @@ export default function NinjaDetail() {
         adminNote: ninjaData.adminNote || '',
       });
       setError('');
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = (err as { message?: string })?.message || 'Failed to load ninja data';
       setError('Failed to load ninja data');
-      console.error(err);
+      console.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadNinjaData();
+  }, [loadNinjaData]);
 
   const handleLessonUp = async () => {
     if (!ninja) return;
     
     try {
       // figure out max lessons because belt system is complicated
-      const maxLessonsForLevel = getMaxLessonsForLevel(ninja.currentBeltType, ninja.currentLevel);
-      const maxLevelsForBelt = getMaxLevelsForBelt(ninja.currentBeltType);
+      const beltPath: BeltPath = ninja.beltPath || 'UNITY';
+      const maxLessonsForLevel = getMaxLessonsForLevel(ninja.currentBeltType, ninja.currentLevel, beltPath);
+      const maxLevelsForBelt = getMaxLevelsForBelt(ninja.currentBeltType, beltPath);
       const currentBeltIndex = beltOrder.indexOf(ninja.currentBeltType);
       
       let newBelt = ninja.currentBeltType;
@@ -133,10 +136,11 @@ export default function NinjaDetail() {
         beltType: newBelt,
         level: newLevel,
         lesson: newLesson,
+        beltPath,
       });
       await loadNinjaData();
-    } catch (err: any) {
-      const errorMessage = err.message || err.response?.data?.message || 'Failed to progress';
+    } catch (err: unknown) {
+      const errorMessage = (err as { message?: string }).message || (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to progress';
       alert(errorMessage);
       console.error(err);
     }
@@ -157,8 +161,8 @@ export default function NinjaDetail() {
       });
       setIsEditing(false);
       await loadNinjaData();
-    } catch (err: any) {
-      const errorMessage = err.message || err.response?.data?.message || 'Failed to save changes';
+    } catch (err: unknown) {
+      const errorMessage = (err as { message?: string }).message || (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to save changes';
       alert(errorMessage);
       console.error(err);
     }
@@ -529,8 +533,8 @@ export default function NinjaDetail() {
                                 setProgressHistory(historyData);
                                 setUnredeemedPurchases(unredeemedData);
                                 setAllPurchases(allPurchasesData);
-                              } catch (err: any) {
-                                alert(err.response?.data?.message || err.message || 'Failed to unlock account');
+                              } catch (err: unknown) {
+                                alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || (err as { message?: string }).message || 'Failed to unlock account');
                                 console.error(err);
                                 // Reload to get current state
                                 loadNinjaData();
@@ -564,8 +568,8 @@ export default function NinjaDetail() {
                                 setProgressHistory(historyData);
                                 setUnredeemedPurchases(unredeemedData);
                                 setAllPurchases(allPurchasesData);
-                              } catch (err: any) {
-                                alert(err.response?.data?.message || err.message || 'Failed to lock account');
+                              } catch (err: unknown) {
+                                alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || (err as { message?: string }).message || 'Failed to lock account');
                                 console.error(err);
                                 // Reload to get current state
                                 loadNinjaData();

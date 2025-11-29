@@ -50,7 +50,8 @@ export default function AuthCard({ role, onSwitchToAdmin }: AuthCardProps) {
         navigate('/dashboard');
       }
     } catch (error) {
-      if ((error as any)?.response?.status === 401) {
+      const err = error as { response?: { status?: number }; message?: string };
+      if (err?.response?.status === 401) {
         setError(
           isAdmin
             ? 'Invalid username or password'

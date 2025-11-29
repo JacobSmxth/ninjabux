@@ -48,9 +48,10 @@ export default function Shop({ ninjaId }: Props) {
       setItems(itemsData);
       setPurchases(purchasesData);
       setError('');
-    } catch (err: any) {
-      if (err.response?.status === 403 || err.message?.includes('Account is locked')) {
-        const errorMsg = err.response?.data?.message || err.message || 'Account is locked';
+    } catch (err: unknown) {
+      const typedErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      if (typedErr.response?.status === 403 || typedErr.message?.includes('Account is locked')) {
+        const errorMsg = typedErr.response?.data?.message || typedErr.message || 'Account is locked';
         setLockStatus(true, errorMsg);
       }
       setError('Failed to load shop data');
@@ -58,7 +59,7 @@ export default function Shop({ ninjaId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [ninjaId]);
+  }, [ninjaId, setLockStatus]);
 
   useEffect(() => {
     loadData();
@@ -88,16 +89,17 @@ export default function Shop({ ninjaId }: Props) {
           setTimeout(() => setPurchaseMessage(null), 5000);
 
           await loadData();
-        } catch (err: any) {
-          if (err.response?.status === 403 || err.message?.includes('Account is locked')) {
-            const errorMsg = err.response?.data?.message || err.message || 'Account is locked';
+        } catch (err: unknown) {
+          const typedErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+          if (typedErr.response?.status === 403 || typedErr.message?.includes('Account is locked')) {
+            const errorMsg = typedErr.response?.data?.message || typedErr.message || 'Account is locked';
             setLockStatus(true, errorMsg);
             setPurchaseMessage({ type: 'error', text: errorMsg });
             setTimeout(() => setPurchaseMessage(null), 5000);
             // reload to get updated lock status
             await loadData();
           } else {
-            const errorMsg = err.response?.data?.message || 'Failed to purchase item';
+            const errorMsg = typedErr.response?.data?.message || 'Failed to purchase item';
             setPurchaseMessage({ type: 'error', text: errorMsg });
             setTimeout(() => setPurchaseMessage(null), 5000);
           }

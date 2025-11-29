@@ -27,12 +27,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLastActivity(Date.now());
   };
 
-  const logout = () => {
+  const logout = React.useCallback(() => {
     authService.logout();
     setIsAuthenticated(false);
     setUserInfo(null);
     navigate('/');
-  };
+  }, [navigate]);
 
   useEffect(() => {
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [isAuthenticated, lastActivity]);
+  }, [isAuthenticated, lastActivity, logout]);
 
   const loginNinja = async (username: string) => {
     const response = await authService.loginNinja(username);
@@ -107,6 +107,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

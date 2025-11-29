@@ -108,6 +108,7 @@ export default function AdminDashboard({ onLogout }: Props) {
     beltType: INITIAL_NINJA_PROGRESS.beltType,
     level: INITIAL_NINJA_PROGRESS.level,
     lesson: INITIAL_NINJA_PROGRESS.lesson,
+    beltPath: INITIAL_NINJA_PROGRESS.beltPath,
   });
   const [ninjaFormInitialValues, setNinjaFormInitialValues] = useState<NinjaFormValues>(createEmptyNinjaForm());
   const [ninjaFormSubmitting, setNinjaFormSubmitting] = useState(false);
@@ -340,7 +341,7 @@ export default function AdminDashboard({ onLogout }: Props) {
     loadCurrentAdmin();
     loadData();
     loadAuditLogs();
-  }, [loadData, loadAuditLogs]);
+  }, [loadData, loadAuditLogs, username]);
 
   // reload when filters change, otherwise stale data confuses admins
   useEffect(() => {
@@ -373,6 +374,7 @@ export default function AdminDashboard({ onLogout }: Props) {
       beltType: ninja.currentBeltType,
       level: ninja.currentLevel || INITIAL_NINJA_PROGRESS.level,
       lesson: ninja.currentLesson || INITIAL_NINJA_PROGRESS.lesson,
+      beltPath: ninja.beltPath || INITIAL_NINJA_PROGRESS.beltPath,
     });
   };
 
@@ -389,6 +391,7 @@ export default function AdminDashboard({ onLogout }: Props) {
       beltType: values.beltType,
       level: values.level,
       lesson: values.lesson,
+      beltPath: values.beltPath || INITIAL_NINJA_PROGRESS.beltPath,
     };
 
     if (!trimmed.firstName || !trimmed.lastName || !trimmed.username) {
@@ -396,7 +399,7 @@ export default function AdminDashboard({ onLogout }: Props) {
       return;
     }
 
-    const normalized = normalizeProgress(trimmed.beltType, trimmed.level, trimmed.lesson);
+    const normalized = normalizeProgress(trimmed.beltType, trimmed.level, trimmed.lesson, trimmed.beltPath);
 
     try {
       setNinjaFormSubmitting(true);
@@ -408,6 +411,7 @@ export default function AdminDashboard({ onLogout }: Props) {
           beltType: normalized.beltType,
           level: normalized.level,
           lesson: normalized.lesson,
+          beltPath: normalized.beltPath,
         });
         success('Ninja created successfully!');
       } else if (editingNinja) {
@@ -418,6 +422,7 @@ export default function AdminDashboard({ onLogout }: Props) {
           beltType: normalized.beltType,
           level: normalized.level,
           lesson: normalized.lesson,
+          beltPath: normalized.beltPath,
         });
         success('Ninja updated successfully!');
       } else {
