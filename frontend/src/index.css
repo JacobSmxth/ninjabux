@@ -12,15 +12,15 @@
   --gradient-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   --gradient-orange: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
 
-  --white-belt: #ffffff;
-  --yellow-belt: #ffd700;
-  --orange-belt: #ff8c00;
-  --green-belt: #32cd32;
-  --blue-belt: #4169e1;
-  --purple-belt: #9370db;
-  --red-belt: #dc143c;
-  --brown-belt: #8b4513;
-  --black-belt: #1a1a1a;
+  --white-belt: linear-gradient(135deg, #f7f8fb 0%, #e2e8f0 100%);
+  --yellow-belt: linear-gradient(135deg, #fff44f 0%, #ffd100 60%, #f2c200 100%);
+  --orange-belt: linear-gradient(135deg, #ffb079 0%, #ff7a3d 100%);
+  --green-belt: linear-gradient(135deg, #8ee0c3 0%, #3ccf91 100%);
+  --blue-belt: linear-gradient(135deg, #8ec5ff 0%, #1f6feb 100%);
+  --purple-belt: linear-gradient(135deg, #a96bff 0%, #7c3aed 100%);
+  --red-belt: linear-gradient(135deg, #ff6b6b 0%, #ff1f1f 100%);
+  --brown-belt: linear-gradient(135deg, #caa074 0%, #9c6938 100%);
+  --black-belt: linear-gradient(135deg, #0b0f19 0%, #0d1420 60%, #05060a 100%);
 }
 
 * {
@@ -137,15 +137,15 @@ code {
   width: 100%;
 }
 
-.belt-white { background: var(--white-belt); color: var(--ninja-black); border-color: var(--ninja-black) !important; }
-.belt-yellow { background: var(--yellow-belt); color: var(--ninja-black); }
-.belt-orange { background: var(--orange-belt); color: white; }
-.belt-green { background: var(--green-belt); color: white; }
-.belt-blue { background: var(--blue-belt); color: white; }
-.belt-purple { background: var(--purple-belt); color: white; }
-.belt-red { background: var(--red-belt); color: white; }
-.belt-brown { background: var(--brown-belt); color: white; }
-.belt-black { background: var(--black-belt); color: white; }
+.belt-white { background: var(--white-belt); color: #0b1324; border-color: #0b1324 !important; }
+.belt-yellow { background: var(--yellow-belt); color: #1f1400; border-color: #f2c200 !important; box-shadow: 0 0 18px rgba(255, 209, 0, 0.45); }
+.belt-orange { background: var(--orange-belt); color: #2f1200; }
+.belt-green { background: var(--green-belt); color: #0d2f23; }
+.belt-blue { background: var(--blue-belt); color: #0b234c; }
+.belt-purple { background: var(--purple-belt); color: #14092d; border-color: #7c3aed !important; }
+.belt-red { background: var(--red-belt); color: #240808; border-color: #ff1f1f !important; }
+.belt-brown { background: var(--brown-belt); color: #2b1a0e; border-color: #9c6938 !important; }
+.belt-black { background: var(--black-belt); color: #e5e7eb; border-color: #1f2937 !important; box-shadow: 0 0 14px rgba(0, 0, 0, 0.35); }
 
 .error {
   color: #dc3545;

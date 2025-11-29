@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { BeltType } from '../types';
+import type { BeltType, BeltPath } from '../types';
 import {
   clampLessonForLevel,
   clampLevelToBelt,
@@ -15,6 +15,7 @@ export interface NinjaFormValues {
   beltType: BeltType;
   level: number;
   lesson: number;
+  beltPath: BeltPath;
 }
 
 interface Props {
@@ -33,6 +34,7 @@ const EMPTY_VALUES: NinjaFormValues = {
   beltType: INITIAL_NINJA_PROGRESS.beltType,
   level: INITIAL_NINJA_PROGRESS.level,
   lesson: INITIAL_NINJA_PROGRESS.lesson,
+  beltPath: INITIAL_NINJA_PROGRESS.beltPath,
 };
 
 export default function NinjaFormModal({
@@ -52,29 +54,29 @@ export default function NinjaFormModal({
   }, [initialValues, isOpen]);
 
   const levelMax = useMemo(
-    () => getMaxLevelsForBelt(formValues.beltType),
-    [formValues.beltType]
+    () => getMaxLevelsForBelt(formValues.beltType, formValues.beltPath),
+    [formValues.beltType, formValues.beltPath]
   );
 
   const lessonMax = useMemo(
-    () => getMaxLessonsForLevel(formValues.beltType, formValues.level),
-    [formValues.beltType, formValues.level]
+    () => getMaxLessonsForLevel(formValues.beltType, formValues.level, formValues.beltPath),
+    [formValues.beltType, formValues.level, formValues.beltPath]
   );
 
   if (!isOpen) return null;
 
   const handleBeltChange = (belt: BeltType) => {
     setFormValues((prev) => {
-      const safeLevel = clampLevelToBelt(belt, prev.level);
-      const safeLesson = clampLessonForLevel(belt, safeLevel, prev.lesson);
+      const safeLevel = clampLevelToBelt(belt, prev.level, prev.beltPath);
+      const safeLesson = clampLessonForLevel(belt, safeLevel, prev.lesson, prev.beltPath);
       return { ...prev, beltType: belt, level: safeLevel, lesson: safeLesson };
     });
   };
 
   const handleLevelChange = (value: number) => {
     setFormValues((prev) => {
-      const safeLevel = clampLevelToBelt(prev.beltType, value);
-      const safeLesson = clampLessonForLevel(prev.beltType, safeLevel, prev.lesson);
+      const safeLevel = clampLevelToBelt(prev.beltType, value, prev.beltPath);
+      const safeLesson = clampLessonForLevel(prev.beltType, safeLevel, prev.lesson, prev.beltPath);
       return { ...prev, level: safeLevel, lesson: safeLesson };
     });
   };
@@ -82,7 +84,7 @@ export default function NinjaFormModal({
   const handleLessonChange = (value: number) => {
     setFormValues((prev) => ({
       ...prev,
-      lesson: clampLessonForLevel(prev.beltType, prev.level, value),
+      lesson: clampLessonForLevel(prev.beltType, prev.level, value, prev.beltPath),
     }));
   };
 
@@ -144,18 +146,28 @@ export default function NinjaFormModal({
                 <option value="ORANGE">Orange</option>
                 <option value="GREEN">Green</option>
                 <option value="BLUE">Blue</option>
-                <option value="PURPLE" disabled style={{ color: '#999' }}>
-                  Purple (Coming Soon)
-                </option>
-                <option value="RED" disabled style={{ color: '#999' }}>
-                  Red (Coming Soon)
-                </option>
-                <option value="BROWN" disabled style={{ color: '#999' }}>
-                  Brown (Coming Soon)
-                </option>
-                <option value="BLACK" disabled style={{ color: '#999' }}>
-                  Black (Coming Soon)
-                </option>
+                <option value="PURPLE">Purple</option>
+                <option value="RED">Red</option>
+                <option value="BROWN">Brown</option>
+                <option value="BLACK">Black</option>
+              </select>
+            </div>
+            <div className="form-field">
+              <label>Path</label>
+              <select
+                value={formValues.beltPath}
+                onChange={(e) =>
+                  setFormValues((prev) => {
+                    const nextPath = e.target.value as BeltPath;
+                    const safeLevel = clampLevelToBelt(prev.beltType, prev.level, nextPath);
+                    const safeLesson = clampLessonForLevel(prev.beltType, safeLevel, prev.lesson, nextPath);
+                    return { ...prev, beltPath: nextPath, level: safeLevel, lesson: safeLesson };
+                  })
+                }
+              >
+                <option value="UNITY">Unity</option>
+                <option value="GODOT">Godot</option>
+                <option value="UNREAL">Unreal (beta)</option>
               </select>
             </div>
             <div className="form-field">

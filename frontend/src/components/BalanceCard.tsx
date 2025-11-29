@@ -32,7 +32,7 @@ export default function BalanceCard({
         padding: '1rem 1.8rem',
       }}
     >
-      <div style={{ color: theme.primary }}>
+      <div style={{ color: 'var(--text)' }}>
         <FiDollarSign size={32} />
       </div>
       <div>
@@ -53,7 +53,7 @@ export default function BalanceCard({
             margin: '0.25rem 0 0 0',
             fontSize: '2rem',
             fontWeight: 900,
-            color: theme.primary,
+            color: 'var(--text)',
           }}
         >
           {formatBux(balance)}

@@ -1,4 +1,5 @@
 export type BeltType = 'WHITE' | 'YELLOW' | 'ORANGE' | 'GREEN' | 'BLUE' | 'PURPLE' | 'RED' | 'BROWN' | 'BLACK';
+export type BeltPath = 'UNITY' | 'GODOT' | 'UNREAL';
 
 export interface Ninja {
   id: number;
@@ -12,6 +13,7 @@ export interface Ninja {
   currentLevel: number;
   currentLesson: number;
   currentBeltType: BeltType;
+  beltPath?: BeltPath;
   isLocked?: boolean;
   lockReason?: string;
   lockedAt?: string;
@@ -52,12 +54,14 @@ export interface CreateNinjaRequest {
   beltType?: BeltType;
   level?: number;
   lesson?: number;
+  beltPath?: BeltPath;
 }
 
 export interface UpdateProgressRequest {
   beltType: BeltType;
   level: number;
   lesson: number;
+  beltPath?: BeltPath;
 }
 
 export interface PurchaseRequest {
@@ -87,6 +91,7 @@ export interface UpdateNinjaRequest {
   level?: number;
   lesson?: number;
   adminNote?: string;
+  beltPath?: BeltPath;
 }
 
 export interface LeaderboardEntry {
@@ -127,10 +132,11 @@ export interface CreateShopItemRequest {
 export interface ProgressHistory {
   id: number;
   beltType: BeltType;
+  beltPath?: BeltPath;
   level: number;
   lesson: number;
   buxEarned: number;
-  earningType: 'LEVEL_UP' | 'QUIZ_REWARD' | 'ADMIN_AWARD' | 'ADMIN_CORRECTION';
+  earningType: 'LEVEL_UP' | 'ADMIN_AWARD' | 'ADMIN_CORRECTION';
   timestamp: string;
   notes?: string;
   legacyDelta?: number;

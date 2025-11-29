@@ -26,15 +26,16 @@ export default function BeltTag({ beltType, label, size = 'medium' }: BeltTagPro
     <span
       style={{
         display: 'inline-block',
-        background: theme.primary,
-        color: theme.primary === '#ffffff' ? '#000000' : '#ffffff',
+        background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+        color: theme.textColor,
         padding: style.padding,
         borderRadius: '8px',
         fontSize: style.fontSize,
         fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.3px',
-        border: `2px solid ${theme.primary}`,
+        border: `2px solid ${theme.accent}`,
+        boxShadow: `0 6px 14px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.08) inset`,
       }}
     >
       {label || `${beltType} Belt`}

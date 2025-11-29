@@ -6,53 +6,53 @@
 
 /* Default values (lower belt palette) to prevent unset vars before tier class is applied */
 :root {
-  --surface: #ffffff;
-  --surface-secondary: #f9fafb;
+  --surface: #f8fafc;
+  --surface-secondary: #edf2fb;
   --card: #ffffff;
-  --text: #1a1a1a;
-  --text-secondary: #666666;
-  --border: #e5e7eb;
-  --accent: #4169e1;
-  --accent-strong: #2d4fc8;
-  --shadow-sm: 0 2px 8px rgba(65, 105, 225, 0.08);
-  --shadow-md: 0 4px 12px rgba(65, 105, 225, 0.12);
-  --shadow-lg: 0 8px 30px rgba(65, 105, 225, 0.15);
-  --bg-gradient: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
-  --bg-pattern: radial-gradient(circle at 1px 1px, rgba(65, 105, 225, 0.05) 1px, transparent 1px);
+  --text: #0f172a;
+  --text-secondary: #4b5563;
+  --border: #e2e8f0;
+  --accent: #1f6feb;
+  --accent-strong: #194bb6;
+  --shadow-sm: 0 2px 8px rgba(31, 111, 235, 0.08);
+  --shadow-md: 0 4px 12px rgba(31, 111, 235, 0.12);
+  --shadow-lg: 0 8px 30px rgba(31, 111, 235, 0.16);
+  --bg-gradient: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 50%, #dce7ff 100%);
+  --bg-pattern: radial-gradient(circle at 1px 1px, rgba(31, 111, 235, 0.05) 1px, transparent 1px);
 }
 
-/* Lower belts (White → Blue): Light, approachable aesthetic */
+/* Lower belts (White → Blue): Light, vibrant aesthetic */
 :root.belt-tier-lower {
-  --surface: #ffffff;
-  --surface-secondary: #f9fafb;
+  --surface: #f8fafc;
+  --surface-secondary: #edf2fb;
   --card: #ffffff;
-  --text: #1a1a1a;
-  --text-secondary: #666666;
-  --border: #e5e7eb;
-  --accent: #4169e1;
-  --accent-strong: #2d4fc8;
-  --shadow-sm: 0 2px 8px rgba(65, 105, 225, 0.08);
-  --shadow-md: 0 4px 12px rgba(65, 105, 225, 0.12);
-  --shadow-lg: 0 8px 30px rgba(65, 105, 225, 0.15);
-  --bg-gradient: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
-  --bg-pattern: radial-gradient(circle at 1px 1px, rgba(65, 105, 225, 0.05) 1px, transparent 1px);
+  --text: #0f172a;
+  --text-secondary: #4b5563;
+  --border: #e2e8f0;
+  --accent: #1f6feb;
+  --accent-strong: #194bb6;
+  --shadow-sm: 0 2px 8px rgba(31, 111, 235, 0.08);
+  --shadow-md: 0 4px 12px rgba(31, 111, 235, 0.12);
+  --shadow-lg: 0 8px 30px rgba(31, 111, 235, 0.16);
+  --bg-gradient: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 50%, #dce7ff 100%);
+  --bg-pattern: radial-gradient(circle at 1px 1px, rgba(31, 111, 235, 0.05) 1px, transparent 1px);
 }
 
-/* Upper belts (Purple → Black): Deep, mature aesthetic */
+/* Upper belts (Purple → Black): Deep, saturated aesthetic */
 :root.belt-tier-upper {
-  --surface: #1a1a2e;
-  --surface-secondary: #0f3460;
-  --card: #16213e;
-  --text: #ffffff;
-  --text-secondary: #b0b8d4;
-  --border: #243b69;
-  --accent: #e94560;
-  --accent-strong: #d63649;
-  --shadow-sm: 0 2px 8px rgba(233, 69, 96, 0.15);
-  --shadow-md: 0 4px 12px rgba(233, 69, 96, 0.2);
-  --shadow-lg: 0 8px 30px rgba(233, 69, 96, 0.25);
-  --bg-gradient: linear-gradient(135deg, #0f3460 0%, #1a1a2e 50%, #16213e 100%);
-  --bg-pattern: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(233, 69, 96, 0.03) 2px, rgba(233, 69, 96, 0.03) 4px);
+  --surface: #0f172a;
+  --surface-secondary: #111827;
+  --card: #111827;
+  --text: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --border: #1f2937;
+  --accent: #8a3ffc;
+  --accent-strong: #5b1fbd;
+  --shadow-sm: 0 2px 8px rgba(138, 63, 252, 0.18);
+  --shadow-md: 0 4px 12px rgba(138, 63, 252, 0.22);
+  --shadow-lg: 0 8px 30px rgba(138, 63, 252, 0.28);
+  --bg-gradient: linear-gradient(145deg, #0b1021 0%, #12172c 40%, #1b1233 100%);
+  --bg-pattern: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(138, 63, 252, 0.05) 2px, rgba(138, 63, 252, 0.05) 4px);
 }
 
 /* ======================
