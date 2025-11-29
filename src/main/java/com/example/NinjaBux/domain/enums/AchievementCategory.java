@@ -2,7 +2,6 @@ package com.example.NinjaBux.domain.enums;
 
 public enum AchievementCategory {
     PROGRESS("Progress", "Achievements for advancing through the curriculum"),
-    QUIZ("Quiz Champion", "Achievements for quiz performance"),
     PURCHASE("Shop Master", "Achievements for shop activity"),
     STREAK("Consistency", "Achievements for regular participation"),
     SOCIAL("Social", "Achievements for community participation"),

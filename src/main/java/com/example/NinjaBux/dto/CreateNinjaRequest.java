@@ -1,6 +1,7 @@
 package com.example.NinjaBux.dto;
 
 import com.example.NinjaBux.domain.enums.BeltType;
+import com.example.NinjaBux.domain.enums.BeltPath;
 
 public class CreateNinjaRequest {
     private String firstName;
@@ -9,6 +10,7 @@ public class CreateNinjaRequest {
     private BeltType beltType;
     private Integer level;
     private Integer lesson;
+    private BeltPath beltPath;
 
     public CreateNinjaRequest() {}
 
@@ -59,4 +61,6 @@ public class CreateNinjaRequest {
     public void setLesson(Integer lesson) {
         this.lesson = lesson;
     }
+    public BeltPath getBeltPath() { return beltPath; }
+    public void setBeltPath(BeltPath beltPath) { this.beltPath = beltPath; }
 }

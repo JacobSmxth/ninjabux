@@ -1,11 +1,13 @@
 package com.example.NinjaBux.dto;
 
 import com.example.NinjaBux.domain.enums.BeltType;
+import com.example.NinjaBux.domain.enums.BeltPath;
 
 public class UpdateProgressRequest {
     private BeltType beltType;
     private int level;
     private int lesson;
+    private BeltPath beltPath;
 
     public UpdateProgressRequest() {}
 
@@ -35,4 +37,6 @@ public class UpdateProgressRequest {
     public void setLesson(int lesson) {
         this.lesson = lesson;
     }
+    public BeltPath getBeltPath() { return beltPath; }
+    public void setBeltPath(BeltPath beltPath) { this.beltPath = beltPath; }
 }

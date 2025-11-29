@@ -181,7 +181,7 @@ public class NinjaLeaderboardService {
         ProgressHistory startRecord = beforeStart.get(beforeStart.size() - 1);
         lessonsAtStart =
             BeltRewardCalculator.calculateTotalLessons(
-                startRecord.getBeltType(), startRecord.getLevel(), startRecord.getLesson());
+                startRecord.getBeltType(), startRecord.getLevel(), startRecord.getLesson(), ninja.getBeltPath());
       } else {
         List<ProgressHistory> periodRecords =
             ninjaAllRecords.stream()
@@ -197,23 +197,23 @@ public class NinjaLeaderboardService {
           int firstLevel = firstRecord.getLevel();
           int firstLesson = firstRecord.getLesson();
 
-          int[] lessonsPerLevel = BeltRewardCalculator.getLessonsPerLevel(firstBelt);
+          int[] lessonsPerLevel = BeltRewardCalculator.getLessonsPerLevel(firstBelt, ninja.getBeltPath());
           if (firstLevel > 1) {
             if (lessonsPerLevel.length >= firstLevel - 1) {
               int prevLevelLastLesson = lessonsPerLevel[firstLevel - 2];
               lessonsAtStart =
                   BeltRewardCalculator.calculateTotalLessons(
-                      firstBelt, firstLevel - 1, prevLevelLastLesson);
+                      firstBelt, firstLevel - 1, prevLevelLastLesson, ninja.getBeltPath());
             } else {
               lessonsAtStart =
-                  BeltRewardCalculator.calculateTotalLessons(firstBelt, firstLevel, firstLesson);
+                  BeltRewardCalculator.calculateTotalLessons(firstBelt, firstLevel, firstLesson, ninja.getBeltPath());
             }
           } else if (firstLesson > 1) {
             lessonsAtStart =
-                BeltRewardCalculator.calculateTotalLessons(firstBelt, firstLevel, firstLesson - 1);
+                BeltRewardCalculator.calculateTotalLessons(firstBelt, firstLevel, firstLesson - 1, ninja.getBeltPath());
           } else {
             lessonsAtStart =
-                BeltRewardCalculator.calculateTotalLessons(firstBelt, firstLevel, firstLesson);
+                BeltRewardCalculator.calculateTotalLessons(firstBelt, firstLevel, firstLesson, ninja.getBeltPath());
           }
         } else {
           continue;
@@ -222,7 +222,7 @@ public class NinjaLeaderboardService {
 
       int lessonsAtEnd =
           BeltRewardCalculator.calculateTotalLessons(
-              ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getCurrentLesson());
+              ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getCurrentLesson(), ninja.getBeltPath());
 
       int advanced = lessonsAtEnd - lessonsAtStart;
       if (advanced > 0) {

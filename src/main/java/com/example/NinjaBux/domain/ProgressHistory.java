@@ -41,7 +41,6 @@ public class ProgressHistory {
 
     public enum EarningType {
         LEVEL_UP,
-        QUIZ_REWARD,
         ADMIN_AWARD,
         ADMIN_CORRECTION
     }

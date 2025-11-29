@@ -142,20 +142,6 @@ public class LedgerService extends NinjaServiceBase {
   }
 
   @Transactional
-  public LedgerTxn recordQuizReward(Long ninjaId, int buxAmount, String note) {
-    Ninja ninja = findNinja(ninjaId);
-    LedgerTxn txn =
-        new LedgerTxn(
-            ninja,
-            buxAmount,
-            LedgerTxnType.EARN,
-            LedgerSourceType.QUIZ,
-            null,
-            note != null ? note : String.format("Quiz reward (+%d Bux)", buxAmount));
-    return ledgerTxnRepository.save(txn);
-  }
-
-  @Transactional
   public LedgerTxn recordAdminAdjustment(
       Long ninjaId, int buxAmount, String note, String adminUsername) {
     Ninja ninja = findNinja(ninjaId);
@@ -190,14 +176,9 @@ public class LedgerService extends NinjaServiceBase {
   }
 
   @Transactional
-  public int onboardNinjaWithLegacy(Long ninjaId, double computedLegacyAmount) {
+  public int onboardNinjaWithLegacy(Long ninjaId, double computedOnboardingBux) {
     Ninja ninja = findNinja(ninjaId);
-    int totalLessons =
-        BeltRewardCalculator.calculateTotalLessons(
-            ninja.getCurrentBeltType(), ninja.getCurrentLevel(), ninja.getCurrentLesson());
-    int buxGrant = calculateBuxGrant(totalLessons);
-    int extraBux = (int) Math.round(computedLegacyAmount / 10.0);
-    int totalBuxGrant = buxGrant + extraBux;
+    int totalBuxGrant = (int) Math.round(computedOnboardingBux);
     LedgerTxn txn =
         new LedgerTxn(
             ninja,
@@ -206,20 +187,10 @@ public class LedgerService extends NinjaServiceBase {
             LedgerSourceType.IMPORT,
             null,
             String.format(
-                "Import/onboarding: Bux grant (%d from lessons + %d from legacy = %d total Bux)",
-                buxGrant, extraBux, totalBuxGrant));
+                "Import/onboarding: Bux grant (calculated from belt/level/lesson = %d Bux)",
+                totalBuxGrant));
     ledgerTxnRepository.save(txn);
     return totalBuxGrant;
-  }
-
-  private int calculateBuxGrant(int totalLessons) {
-    if (totalLessons <= 50) {
-      return totalLessons;
-    }
-    if (totalLessons <= 100) {
-      return 50 + (int) Math.round((totalLessons - 50) * 0.5);
-    }
-    return 75 + (int) Math.round((totalLessons - 100) * 0.25);
   }
 
   public List<LedgerTxn> getLedgerHistory(Long ninjaId) {

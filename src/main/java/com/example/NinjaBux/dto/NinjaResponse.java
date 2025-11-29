@@ -2,6 +2,7 @@ package com.example.NinjaBux.dto;
 
 import com.example.NinjaBux.domain.Ninja;
 import com.example.NinjaBux.domain.enums.BeltType;
+import com.example.NinjaBux.domain.enums.BeltPath;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
@@ -14,7 +15,9 @@ public class NinjaResponse {
     private int legacyBalance;
     private int totalBuxEarned;
     private int totalBuxSpent;
+    private int legacyPoints;
     private BeltType currentBeltType;
+    private BeltPath beltPath;
     private int currentLevel;
     private int currentLesson;
     @JsonProperty("isLocked")
@@ -31,9 +34,11 @@ public class NinjaResponse {
         this.username = ninja.getUsername();
         this.buxBalance = buxBalance;
         this.legacyBalance = legacyBalance;
+        this.legacyPoints = ninja.getLegacyPoints();
         this.totalBuxEarned = 0;
         this.totalBuxSpent = 0;
         this.currentBeltType = ninja.getCurrentBeltType();
+        this.beltPath = ninja.getBeltPath();
         this.currentLevel = ninja.getCurrentLevel();
         this.currentLesson = ninja.getCurrentLesson();
         this.locked = ninja.isLocked();
@@ -94,12 +99,21 @@ public class NinjaResponse {
         this.totalBuxSpent = totalBuxSpent;
     }
 
+    public int getLegacyPoints() {
+        return legacyPoints;
+    }
+    public void setLegacyPoints(int legacyPoints) {
+        this.legacyPoints = legacyPoints;
+    }
+
     public BeltType getCurrentBeltType() {
         return currentBeltType;
     }
     public void setCurrentBeltType(BeltType currentBeltType) {
         this.currentBeltType = currentBeltType;
     }
+    public BeltPath getBeltPath() { return beltPath; }
+    public void setBeltPath(BeltPath beltPath) { this.beltPath = beltPath; }
 
     public int getCurrentLevel() {
         return currentLevel;

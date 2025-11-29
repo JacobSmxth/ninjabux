@@ -72,7 +72,8 @@ public class NinjaController {
             request.getUsername(),
             request.getBeltType(),
             request.getLevel(),
-            request.getLesson());
+            request.getLesson(),
+            request.getBeltPath());
     auditService.log(
         adminUsername,
         "CREATE_NINJA",
@@ -146,7 +147,11 @@ public class NinjaController {
           String adminUsername) {
     Ninja updatedNinja =
         ninjaProgressService.updateProgress(
-            id, request.getBeltType(), request.getLevel(), request.getLesson());
+            id,
+            request.getBeltType(),
+            request.getLevel(),
+            request.getLesson(),
+            request.getBeltPath());
     auditService.log(
         adminUsername,
         "UPDATE_PROGRESS",
@@ -185,7 +190,8 @@ public class NinjaController {
             request.getUsername(),
             request.getBeltType(),
             request.getLevel(),
-            request.getLesson());
+            request.getLesson(),
+            request.getBeltPath());
     auditService.log(
         adminUsername,
         "UPDATE_NINJA",
@@ -346,7 +352,12 @@ public class NinjaController {
     try {
       Ninja updatedNinja =
           ninjaProgressService.updateProgressWithCorrection(
-              id, request.getBeltType(), request.getLevel(), request.getLesson(), adminUsername);
+              id,
+              request.getBeltType(),
+              request.getLevel(),
+              request.getLesson(),
+              request.getBeltPath(),
+              adminUsername);
       auditService.log(
           adminUsername,
           "UPDATE_PROGRESS_WITH_CORRECTION",
