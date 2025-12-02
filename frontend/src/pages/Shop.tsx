@@ -20,7 +20,7 @@ export default function Shop({ ninjaId }: Props) {
   const [error, setError] = useState<string>('');
   const [purchaseMessage, setPurchaseMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [tooltipItemId, setTooltipItemId] = useState<number | null>(null);
-  
+
   const [confirmationModal, setConfirmationModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -35,7 +35,7 @@ export default function Shop({ ninjaId }: Props) {
     message: '',
     onConfirm: () => {},
   });
-  
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -111,58 +111,58 @@ export default function Shop({ ninjaId }: Props) {
 
   const getPurchaseRestrictions = (item: ShopItem) => {
     const restrictions: string[] = [];
-    
+
     if (item.maxPerStudent) {
       const count = purchases.filter(p => p.itemId === item.id).length;
       if (count >= item.maxPerStudent) {
         restrictions.push(`Max ${item.maxPerStudent} per student (${count}/${item.maxPerStudent})`);
       }
     }
-    
+
     if (item.maxPerDay) {
       const today = new Date().toDateString();
-      const todayCount = purchases.filter(p => 
+      const todayCount = purchases.filter(p =>
         p.itemId === item.id && new Date(p.purchaseDate).toDateString() === today
       ).length;
       if (todayCount >= item.maxPerDay) {
         restrictions.push(`Max ${item.maxPerDay} per day (${todayCount}/${item.maxPerDay})`);
       }
     }
-    
+
     if (item.maxActiveAtOnce) {
-      const activeCount = purchases.filter(p => 
+      const activeCount = purchases.filter(p =>
         p.itemId === item.id && !p.redeemed
       ).length;
       if (activeCount >= item.maxActiveAtOnce) {
         restrictions.push(`Max ${item.maxActiveAtOnce} active at once (${activeCount}/${item.maxActiveAtOnce})`);
       }
     }
-    
+
     if (item.restrictedCategories) {
       restrictions.push(`Restricted for: ${item.restrictedCategories}`);
     }
-    
+
     return restrictions;
   };
 
   const canPurchaseItem = (item: ShopItem): { canPurchase: boolean; reason?: string } => {
     if (!ninja) return { canPurchase: false, reason: 'Not logged in' };
-    
+
     if (ninja.buxBalance < item.price) {
       return { canPurchase: false, reason: `Not enough Bux! You need ${formatBux(item.price)} but only have ${formatBux(ninja.buxBalance)}.` };
     }
-    
+
     const restrictions = getPurchaseRestrictions(item);
     if (restrictions.length > 0) {
       return { canPurchase: false, reason: restrictions.join(' | ') };
     }
-    
+
     return { canPurchase: true };
   };
 
   const getRestrictionBadges = (item: ShopItem) => {
     const badges: string[] = [];
-    
+
     if (item.maxPerStudent) {
       badges.push(`Max ${item.maxPerStudent} per student`);
     }
@@ -178,7 +178,7 @@ export default function Shop({ ninjaId }: Props) {
     if (item.restrictedCategories) {
       badges.push(`Restricted: ${item.restrictedCategories}`);
     }
-    
+
     return badges;
   };
 
@@ -229,16 +229,6 @@ export default function Shop({ ninjaId }: Props) {
         }}>
           <span className="balance-label" style={{ color: beltTheme.secondary }}>Your Balance:</span>
           <span className="balance-amount" style={{ color: beltTheme.secondary }}>{formatBux(ninja.buxBalance)} Bux</span>
-          {ninja.legacyBalance !== undefined && ninja.legacyBalance > 0 && (
-            <span className="balance-legacy" style={{ 
-              color: beltTheme.secondary, 
-              fontSize: '0.85rem', 
-              opacity: 0.9, 
-              marginLeft: '0.5rem' 
-            }}>
-              ({formatBux(ninja.legacyBalance)} Legacy)
-            </span>
-          )}
         </div>
       </div>
 
@@ -254,10 +244,10 @@ export default function Shop({ ninjaId }: Props) {
           const canAfford = ninja.buxBalance >= item.price;
           const restrictionBadges = getRestrictionBadges(item);
           const showTooltip = tooltipItemId === item.id && !canPurchase;
-          
+
           return (
-            <div 
-              key={item.id} 
+            <div
+              key={item.id}
               className={`shop-item-row ${!canPurchase ? 'restricted' : ''} ${!canAfford ? 'unaffordable' : ''}`}
             >
               <div className="item-header-grid">
